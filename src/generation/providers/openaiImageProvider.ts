@@ -6,25 +6,9 @@ import {
   type ImageProvider,
   type TestConnectionResult,
 } from '../types'
+import { blobToDataUrl, browserBlockedMessage } from './http'
 
 const API_BASE = 'https://api.openai.com/v1'
-
-function browserBlockedMessage(err: unknown): string {
-  if (err instanceof DOMException && err.name === 'AbortError') return '요청이 취소되었습니다.'
-  if (err instanceof TypeError) {
-    return '브라우저에서 API를 직접 호출하지 못했습니다 (CORS/네트워크). 운영 배포 시에는 서버 프록시가 필요합니다.'
-  }
-  return err instanceof Error ? err.message : String(err)
-}
-
-async function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader()
-    fr.onload = () => resolve(String(fr.result))
-    fr.onerror = () => reject(fr.error)
-    fr.readAsDataURL(blob)
-  })
-}
 
 /**
  * OpenAI Images adapter. First concrete provider; others follow the same

@@ -9,8 +9,8 @@
 
 export type GenerationMode = 'direct' | 'my-gpt'
 
-/** Extensible. Add 'google' | 'flux' | … alongside a matching adapter. */
-export type ProviderType = 'openai'
+/** Extensible. Add 'flux' | 'stability' | … alongside a matching adapter. */
+export type ProviderType = 'openai' | 'google'
 
 export interface ImageProvider {
   id: string

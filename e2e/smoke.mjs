@@ -560,6 +560,39 @@ const run = async () => {
     if (!(await gen2.isChecked())) throw new Error('auto-check did not persist')
   })
 
+  await test('Direct Generate: Google (Imagen) provider 선택 → 이미지 표시 (목킹)', async (page) => {
+    await page.route('**://generativelanguage.googleapis.com/**', (route) => {
+      if (route.request().url().includes(':predict')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            predictions: [{ bytesBase64Encoded: TINY_PNG, mimeType: 'image/png' }],
+          }),
+        })
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    })
+    await boot(page)
+    await openGenerationTab(page, 'direct')
+    // Provider select: pick Google
+    await page
+      .locator('select.field-input')
+      .first()
+      .selectOption({ label: 'Google (Gemini / Imagen)' })
+    await page.locator('input[type="password"]').fill('AIza-test-key')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page
+      .locator('.gs-radio', { hasText: 'Direct Generate' })
+      .locator('input')
+      .check()
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('button', { name: SEED_B, exact: true }).click()
+    await page.locator('.gen-result img').waitFor({ timeout: 15000 })
+    await page.getByText('"생성" 체크됨').waitFor()
+  })
+
   await test('Direct Generate 실패 -> "생성" 체크 안 함 + 재시도 노출', async (page) => {
     await page.route('**://api.openai.com/v1/images/generations', (route) =>
       route.fulfill({

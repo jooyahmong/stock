@@ -255,6 +255,18 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 - **Fallback**: 기본이 Direct인데 사용 가능한 API가 없으면 모달에서 [API 설정] /
   [My GPT로 열기](미등록 시 [My GPT 설정]) 제공.
 
+**등록된 Provider** (`설정 > 생성 > Direct Generate`의 `API Provider`):
+
+| Provider | 모델 | 비고 |
+|---|---|---|
+| **OpenAI** | `gpt-image-1` · `dall-e-3` · `dall-e-2` | `api.openai.com` |
+| **Google (Gemini / Imagen)** | `imagen-3.0-generate-002` · `imagen-4.0-generate-001`(preview) · `gemini-2.5-flash-image-preview` | `generativelanguage.googleapis.com`. `imagen-*` → `:predict`, `gemini-*` → `:generateContent`. **무료 등급은 프롬프트·결과물이 Google 학습·검토에 쓰임** → 상업용은 유료 등급 권장. Preview 모델은 프로덕션 부적합 문구가 붙을 수 있음. |
+
+새 provider 추가 = 어댑터 파일 1개 + `providers/index.ts` 레지스트리·`PROVIDER_TYPES`
+각 1줄 (`ImageGenerationProvider` 인터페이스 구현). UI·핵심 로직 무변경.
+공유 헬퍼는 `providers/http.ts`(CORS 메시지·API 에러 파싱). 브라우저 직접 호출이
+CORS로 막히는 provider는 배포 시 서버 프록시 필요.
+
 ### Direct Generate 레이어 (`src/generation/`) — 완전 분리 / 제거 가능
 
 핵심 원칙: **Direct Generate는 앱의 필수 의존성이 아니다.** keyword 도메인
