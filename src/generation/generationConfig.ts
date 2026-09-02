@@ -3,10 +3,15 @@ import type { GenerationMode, ImageProvider, ProviderType } from './types'
 /**
  * Direct Generate configuration store.
  *
- * Deliberately NOT part of the app `Repository` (principle 2: API code must not
- * be coupled to the keyword core / storage layer). Backed by localStorage for
- * local V1. API keys live here only — swap this one file when the production
- * key-handling design is decided (principle 8). Nothing else needs to change.
+ * Deliberately NOT part of the app `Repository` (API config must not be coupled
+ * to the keyword core / storage layer). Backed by localStorage, per browser.
+ *
+ * SYNC POLICY (future Sync Mode):
+ *  - LOCAL ONLY, never uploaded to an account / Cloudflare D1, never in an Excel
+ *    backup:  `apiKey`  (a personal secret; re-entered on each device).
+ *  - Syncable later:  `defaultGenerationMode`, provider `name` / `providerType`
+ *    / `model`, and the My GPT list (name + chatgpt.com URL — not secrets).
+ * Keep any real sync implementation splitting `apiKey` out from the rest.
  */
 
 const STORAGE_KEY = 'woojoo.generation.config.v1'

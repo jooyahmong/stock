@@ -9,6 +9,9 @@ export function Toolbar({
   onDownloadTemplate,
   onFullExport,
   onOpenGpt,
+  visibleCount,
+  allVisibleSelected,
+  onToggleSelectAllVisible,
 }: {
   snapshot: PlanSnapshot
   onOpenImport: () => void
@@ -17,6 +20,9 @@ export function Toolbar({
   onDownloadTemplate: () => void
   onFullExport: () => void
   onOpenGpt?: () => void
+  visibleCount: number
+  allVisibleSelected: boolean
+  onToggleSelectAllVisible: (checked: boolean) => void
 }) {
   const search = useUiStore((s) => s.search)
   const setSearch = useUiStore((s) => s.setSearch)
@@ -35,6 +41,16 @@ export function Toolbar({
 
   return (
     <div className="toolbar">
+      <label className="select-all" title="현재 보이는 키워드를 모두 선택">
+        <input
+          type="checkbox"
+          checked={visibleCount > 0 && allVisibleSelected}
+          disabled={visibleCount === 0}
+          onChange={(e) => onToggleSelectAllVisible(e.target.checked)}
+        />
+        전체 선택
+      </label>
+
       <input
         className="search"
         type="search"

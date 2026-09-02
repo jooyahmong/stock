@@ -13,6 +13,14 @@
  *    storage-engine-specific live-query mechanism.
  *  - The data model already carries `workspaceId` on every row so multi-user /
  *    multi-workspace separation is an added WHERE clause, not a migration.
+ *  - Every mutable row carries `updatedAt` — the basis for a future Sync Mode's
+ *    Last-Modified-Wins conflict policy (see README "데이터 저장").
+ *
+ * Local Mode (current): workspaceId = LOCAL_WORKSPACE_ID, DexieRepository.
+ * Sync Mode (future): workspaceId = account/workspace id, a D1Repository /
+ * SyncRepository implementing this same interface. UI/domain code is unchanged.
+ * Direct Generate API keys are NEVER part of this contract — they live only in
+ * `src/generation/generationConfig.ts` (localStorage), local to each device.
  */
 
 export type PlanType = '365' | 'weekly' | 'monthly' | 'custom'
@@ -51,6 +59,8 @@ export interface StatusColumn {
   /** true for the seeded 생성 / 미캔 columns — cannot be hidden or deleted. */
   isDefault: boolean
   createdAt: string
+  /** Set on create + every mutation. Basis for future Last-Modified-Wins sync. */
+  updatedAt?: string
 }
 
 export interface KeywordStatus {
@@ -69,6 +79,8 @@ export interface Generator {
   url: string
   isDefault: boolean
   createdAt: string
+  /** Set on create + every mutation. Basis for future Last-Modified-Wins sync. */
+  updatedAt?: string
 }
 
 /** Small key/value bag for app-level prefs (active plan, prompt template later). */

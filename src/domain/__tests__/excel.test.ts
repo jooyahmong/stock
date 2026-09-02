@@ -167,6 +167,23 @@ describe('template + full export round-trip', () => {
     expect(aoa[2][0]).toBe('2027-01-01')
   })
 
+  it('full export is keyword data only — no credential columns or values', () => {
+    const buf = buildFullExportWorkbook({
+      kind: 'date',
+      keywords: [mkKw('k1', '2027-01-01', '벚꽃 봄소풍', 0)],
+      statusColumns: [mkCol('c1', '생성', 0), mkCol('c2', 'Adobe Stock', 1)],
+      statusMap: {},
+    })
+    const wb = XLSX.read(buf, { type: 'array' })
+    const aoa = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], {
+      header: 1,
+    })
+    // header is exactly Date | Keyword | <status columns>, nothing else
+    expect(aoa[0]).toEqual(['Date', 'Keyword', '생성', 'Adobe Stock'])
+    const flat = aoa.flat().join(' ')
+    expect(/\b(api[ _-]?key|token|secret|sk-)/i.test(flat)).toBe(false)
+  })
+
   it('exported file can be re-imported (restore path)', async () => {
     const keywords: KeywordItem[] = [mkKw('k1', '2027-01-01', '떡국', 0)]
     const statusColumns: StatusColumn[] = [mkCol('c1', '생성', 0)]

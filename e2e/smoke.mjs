@@ -203,6 +203,29 @@ const run = async () => {
     await page.getByText('1개 선택됨').waitFor()
   })
 
+  await test('날짜 그룹에는 선택 체크박스가 없다', async (page) => {
+    await boot(page)
+    if ((await page.locator('.pg-head input[type="checkbox"]').count()) !== 0)
+      throw new Error('date group header still has a selection checkbox')
+    // 키워드 행에는 여전히 있음
+    if ((await page.locator('.kw-row .select-box').count()) < 1)
+      throw new Error('keyword rows lost their selection checkbox')
+  })
+
+  await test('전체 선택: 현재 보이는 키워드만 선택 + SelectionBar', async (page) => {
+    await boot(page)
+    const visibleRows = await page.locator('.kw-row').count()
+    await page.locator('.select-all input').check()
+    await page.getByText(`${visibleRows}개 선택됨`).waitFor()
+    if ((await page.locator('.kw-row.is-selected').count()) !== visibleRows)
+      throw new Error('전체 선택이 보이는 행 전부를 선택하지 않음')
+    // 일괄 삭제/체크 컨트롤 노출
+    await page.locator('.selection-bar').getByRole('button', { name: '일괄 체크' }).waitFor()
+    await page.locator('.select-all input').uncheck()
+    if (await page.locator('.selection-bar').count())
+      throw new Error('선택 해제 후에도 SelectionBar가 남아 있음')
+  })
+
   await test('add keyword to a period group', async (page) => {
     await boot(page)
     const group = page.locator('.period-group').first()
@@ -223,6 +246,20 @@ const run = async () => {
     await page.keyboard.press('Escape')
     const row = page.locator('.kw-row', { hasText: SEED_A }).first()
     await row.locator('.status-check', { hasText: 'Adobe Stock' }).waitFor()
+  })
+
+  await test('Settings > 저장 · 백업: Local 안내 + Excel 백업 + 동기화 준비 중', async (page) => {
+    await boot(page)
+    await page.getByRole('button', { name: '⚙ 설정' }).click()
+    await page.locator('.settings-tabs button', { hasText: '저장 · 백업' }).click()
+    await page.getByText('이 기기에 저장').waitFor()
+    const sync = page
+      .locator('.gs-radio', { hasText: '계정으로 동기화' })
+      .locator('input')
+    if (!(await sync.isDisabled()))
+      throw new Error('계정 동기화가 선택 가능 상태로 보임 (준비 중이어야 함)')
+    await page.getByRole('button', { name: 'Excel 전체 백업' }).waitFor()
+    await page.getByText(/API Key는 이 기기에만/).waitFor()
   })
 
   await test('search filters keywords', async (page) => {

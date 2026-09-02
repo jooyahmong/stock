@@ -72,15 +72,64 @@ D1 전환 시 필요한 것: `D1Repository implements Repository` 작성 →
 ## 데이터 모델
 
 ```
-Plan          { id, workspaceId, name, type: 365|weekly|monthly|custom, ... }
-KeywordItem   { id, workspaceId, planId, period, keyword, sortOrder, ... }
-StatusColumn  { id, workspaceId, planId, name, order, isVisible, isDefault, ... }
-KeywordStatus { id, workspaceId, keywordItemId, statusColumnId, checked, ... }
-Generator     { id, workspaceId, name, url, isDefault, ... }
-AppSetting    { key, value }   // 활성 계획, 빈 기간 목록, (Phase 2) 프롬프트 템플릿
+Plan          { id, workspaceId, name, type, createdAt, updatedAt }
+KeywordItem   { id, workspaceId, planId, period, keyword, sortOrder, createdAt, updatedAt }
+StatusColumn  { id, workspaceId, planId, name, order, isVisible, isDefault, createdAt, updatedAt? }
+KeywordStatus { id, workspaceId, keywordItemId, statusColumnId, checked, updatedAt }
+Generator     { id, workspaceId, name, url, isDefault, createdAt, updatedAt? }
+AppSetting    { key, value }   // 활성 계획, 목록 창, 빈 기간 목록, (Phase 2) 프롬프트 템플릿
 ```
 
 `period` 해석: `365/custom` → `YYYY-MM-DD`, `weekly` → `YYYY-Www`, `monthly` → `YYYY-MM`.
+모든 가변 레코드에 `updatedAt` 이 있어 향후 Sync의 Last-Modified-Wins 기준이 된다.
+
+## 데이터 저장 — Local Mode (현재) / Sync Mode (향후)
+
+### Local Mode — 기본, 지금 구현됨
+
+- 회원가입·로그인 없음. 모든 데이터는 **현재 브라우저의 IndexedDB(Dexie)** 에 저장.
+  Plan · Keyword · 생성/미캔/사용자 체크 항목 · 체크 항목 순서·표시 · My GPT URL ·
+  기본 생성 방식 · 일반 설정.
+- 기기·브라우저마다 별개 저장소 (PC Chrome ↔ iPhone Safari 자동 공유 안 됨).
+  PWA로 설치해도 같은 origin의 같은 브라우저 저장소를 쓰므로 Sync가 아니다.
+- **공식 백업 = Excel.** `설정 > 저장 · 백업 → Excel 전체 백업`(= Full Export) 으로
+  `Date | Keyword | 생성 | 미캔 | 사용자 체크 항목` xlsx를 받고, 다른 기기에서
+  `Excel 가져오기`로 복원. Import/Export 구조는 그대로 유지.
+- 설정 화면에 "이 기기에 자동 저장 · 다른 기기와 자동 동기화 안 됨 · 중요한 작업은
+  Excel 백업" 안내.
+
+### Sync Mode — 향후 (이번에 구현 안 함)
+
+목표 UX (`설정 > 저장 · 백업`, 현재는 "준비 중" 비활성):
+
+```
+저장 방식
+ ● 이 기기에 저장      회원가입 없이 사용
+ ○ 계정으로 동기화     여러 기기에서 같은 작업   [준비 중]
+```
+
+- 흐름: `PC ↔ Cloudflare API / D1 ↔ Laptop / Mobile`. 같은 계정으로 로그인하면
+  어느 기기에서나 같은 데이터.
+- **동기화 대상**: Plan · KeywordItem · KeywordStatus · StatusColumn · Generator(My GPT
+  이름·URL) · `defaultGenerationMode` · 일반 generation preference.
+- **동기화 제외 (기기 로컬 전용)**: **Direct Generate API Key**, 민감한 provider
+  credential. `providerType` / `model` 은 동기화 가능하되 `apiKey` 는 제외 —
+  `src/generation/generationConfig.ts` 가 이미 Repository 밖(localStorage)에 있고
+  주석으로 이 규칙을 명시. Excel 백업에도 API Key는 포함되지 않음(`domain/excel.ts`).
+- **최초 Local → Sync 전환**: Local 데이터를 버리지 않는다.
+  `[현재 작업을 계정에 저장] [계정 데이터 불러오기] [취소]` — 첫 Sync 시 Local
+  workspace를 계정 workspace로 업로드.
+- **충돌 정책 (V1)**: CRDT/merge 없이 **Last-Modified-Wins** — 레코드별 `updatedAt`
+  최신값 사용 (Plan · KeywordItem · KeywordStatus · StatusColumn · Generator).
+  실제 구현 시 재검토.
+- **삭제 동기화**: 단순 hard delete만 하면 다른 기기에서 삭제 항목이 되살아날 수
+  있으므로, D1 Sync 구현 시 `deletedAt` / tombstone 도입을 검토 (지금 Local 모델은
+  변경하지 않음).
+- **Repository 확장**: `workspaceId` local(익명) → 계정 workspace. UI/도메인은
+  `Repository` 인터페이스만 쓰므로 `DexieRepository` → `D1Repository` /
+  `SyncRepository` 교체만으로 확장. `src/repo/types.ts` 헤더 참조.
+
+실제 로그인 / OAuth / D1 / 서버 동기화 / API Key 서버 저장은 **별도 요청 전 구현 안 함.**
 
 ## 계획 선택 · 브랜드 · 푸터
 
@@ -243,20 +292,21 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
 
 ## 테스트 결과
 
-- **단위 (vitest) — 84/84 통과**: `periods`, `excel`, `grouping`, `calendar`
+- **단위 (vitest) — 85/85 통과**: `periods`, `excel`(+백업에 credential 없음 검증),
+  `grouping`, `calendar`
   (월 grid·요일 offset·윤년 2월·genMark O/X 규칙), `statusColumns`, `gptUrl`,
   `generationConfig`, `directGenerationService`, `openaiImageProvider`,
   **`buildDefaultStockPlan`**(365일 연속·하루 2개·730개·같은 날짜 2행·빈 키워드
   없음·완전 동일 중복 0·결정론·(월,일) 루프·Valentine 12-01/12-14·Christmas ~10월·
   Halloween ~8월·New Year ~11월·이벤트 당일 배치 안 함·이동형 이벤트 실제 날짜·
   단어 위주 2~7어절·서술형 없음·한정어 <40%·브랜드명 제외·윤년 창도 365/730).
-- **E2E (Playwright, headless Chromium) — 30/30 통과**: 기본 365팩 렌더(창 windowed
-  → 전체 보기 시 365그룹/730행/한국어), **목록 날짜 창**(기본 슬라이스·이후 더 보기·
-  전체 보기/접기·검색 시 창 우회), 작업체크
-  IndexedDB 영속, 선택체크 ↔ 작업체크 독립, 키워드 추가, 사용자 작업단계 추가,
-  검색, 상태 필터, Full Export 내용 검증(같은 날짜 2행), Template, Excel Import,
-  My GPT 클릭·**세션당 1회만 탭 열고 이후 복사만**·**GPT 열기 버튼**·**URL 검증**,
-  Generator 미설정 경고,
+- **E2E (Playwright, headless Chromium) — 33/33 통과**: 기본 365팩 렌더(창 windowed
+  → 전체 보기 시 365그룹/730행/한국어), **목록 날짜 창**, 작업체크 IndexedDB 영속,
+  선택체크 ↔ 작업체크 독립, **날짜 그룹에 선택 체크박스 없음**, **전체 선택(보이는
+  키워드만) + SelectionBar**, 키워드 추가, 체크 항목 추가, **저장 · 백업 탭(Local
+  안내·Excel 백업·동기화 준비 중)**, 검색, 상태 필터, Full Export 내용 검증(같은
+  날짜 2행), Template, Excel Import, My GPT 클릭마다 새 탭 + 복사·**GPT 열기 버튼**·
+  **URL 검증**, Generator 미설정 경고,
   Settings 생성 탭, Direct fallback 모달·My GPT 전환, Direct 성공(목킹) → 이미지 +
   "생성" 자동 체크 + 영속, Direct 실패 → 체크 안 함, 모바일 가로 오버플로 없음,
   **Calendar**: 7열 grid + 과거 ○/×, 오늘·미래 마크 없음, 긴 키워드 ellipsis+title,

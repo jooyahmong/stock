@@ -246,6 +246,7 @@ export class DexieRepository implements Repository {
       isVisible: true,
       isDefault: input.isDefault ?? false,
       createdAt: nowIso(),
+      updatedAt: nowIso(),
     }
     await db.statusColumns.add(col)
     this.emit()
@@ -256,7 +257,7 @@ export class DexieRepository implements Repository {
     statusColumnId: string,
     patch: Partial<Pick<StatusColumn, 'name' | 'order' | 'isVisible'>>,
   ): Promise<void> {
-    const clean: Record<string, unknown> = {}
+    const clean: Record<string, unknown> = { updatedAt: nowIso() }
     if (patch.name !== undefined) clean.name = patch.name.trim() || '새 단계'
     if (patch.order !== undefined) clean.order = patch.order
     if (patch.isVisible !== undefined) clean.isVisible = patch.isVisible
@@ -266,8 +267,9 @@ export class DexieRepository implements Repository {
 
   async reorderStatusColumns(planId: string, orderedIds: string[]): Promise<void> {
     await db.transaction('rw', db.statusColumns, async () => {
+      const ts = nowIso()
       for (let i = 0; i < orderedIds.length; i++) {
-        await db.statusColumns.update(orderedIds[i], { order: i })
+        await db.statusColumns.update(orderedIds[i], { order: i, updatedAt: ts })
       }
     })
     void planId
@@ -363,6 +365,7 @@ export class DexieRepository implements Repository {
       url: input.url.trim(),
       isDefault: makeDefault,
       createdAt: nowIso(),
+      updatedAt: nowIso(),
     }
     await db.transaction('rw', db.generators, async () => {
       if (makeDefault) {
@@ -388,7 +391,7 @@ export class DexieRepository implements Repository {
             await db.generators.update(r.id, { isDefault: false })
         }
       }
-      const clean: Record<string, unknown> = {}
+      const clean: Record<string, unknown> = { updatedAt: nowIso() }
       if (patch.name !== undefined) clean.name = patch.name.trim() || 'Generator'
       if (patch.url !== undefined) clean.url = patch.url.trim()
       if (patch.isDefault !== undefined) clean.isDefault = patch.isDefault

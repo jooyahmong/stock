@@ -168,6 +168,18 @@ export default function App() {
     }
   }, [grouping, listWindow, kind])
 
+  // "전체 선택" targets the keywords currently on screen (list window +
+  // search/filter), never hidden ones.
+  const selection = useUiStore((s) => s.selection)
+  const selectMany = useUiStore((s) => s.selectMany)
+  const visibleKeywordIds = useMemo(
+    () => listView.visible.flatMap((g) => g.items.map((i) => i.id)),
+    [listView],
+  )
+  const allVisibleSelected =
+    visibleKeywordIds.length > 0 &&
+    visibleKeywordIds.every((id) => selection.has(id))
+
   const generationMode = directGenerationEnabled
     ? genConfig.defaultGenerationMode
     : 'my-gpt'
@@ -277,6 +289,11 @@ export default function App() {
                 }}
                 onOpenGpt={
                   generationMode === 'my-gpt' && hasMyGpt ? openGpt : undefined
+                }
+                visibleCount={visibleKeywordIds.length}
+                allVisibleSelected={allVisibleSelected}
+                onToggleSelectAllVisible={(checked) =>
+                  selectMany(visibleKeywordIds, checked)
                 }
               />
 

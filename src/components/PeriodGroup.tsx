@@ -22,17 +22,11 @@ export function PeriodGroup({
   const repo = useRepository()
   const planIdOfGroup = group.items[0]?.planId
   const activePlanId = useUiStore((s) => s.activePlanId)
-  const selectMany = useUiStore((s) => s.selectMany)
-  const selection = useUiStore((s) => s.selection)
 
   const [adding, setAdding] = useState(false)
   const [newKw, setNewKw] = useState('')
 
   const planId = planIdOfGroup ?? activePlanId ?? ''
-  const groupIds = group.items.map((i) => i.id)
-  const allSelected =
-    groupIds.length > 0 && groupIds.every((id) => selection.has(id))
-
   const prog = computeProgress({ statusColumns, statusMap }, group.items)
 
   const addKeyword = async () => {
@@ -46,14 +40,6 @@ export function PeriodGroup({
     <section className="period-group">
       <header className="pg-head">
         <div className="pg-title">
-          <input
-            type="checkbox"
-            className="select-box"
-            checked={allSelected}
-            onChange={(e) => selectMany(groupIds, e.target.checked)}
-            aria-label={`${group.label} 전체 선택`}
-            disabled={groupIds.length === 0}
-          />
           <button
             className="pg-label-btn"
             title="기간 수정"

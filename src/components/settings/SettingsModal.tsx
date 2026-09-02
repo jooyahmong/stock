@@ -10,7 +10,7 @@ import {
   DirectGenerateSettings,
 } from '../../generation'
 
-type Tab = 'generator' | 'stages' | 'excel'
+type Tab = 'generator' | 'stages' | 'storage'
 
 export function SettingsModal({
   plan,
@@ -47,10 +47,10 @@ export function SettingsModal({
           체크 항목
         </button>
         <button
-          className={tab === 'excel' ? 'is-active' : ''}
-          onClick={() => setTab('excel')}
+          className={tab === 'storage' ? 'is-active' : ''}
+          onClick={() => setTab('storage')}
         >
-          엑셀 (Excel)
+          저장 · 백업
         </button>
       </div>
 
@@ -67,7 +67,7 @@ export function SettingsModal({
                 <h4>My GPT</h4>
                 <p className="hint">
                   내 GPT/GPTs 링크입니다. 키워드 클릭 시 프롬프트를 복사하고 이 링크를
-                  기존 GPT 탭으로 엽니다. 자동 전송은 하지 않습니다.
+                  새 탭으로 엽니다. 자동 전송은 하지 않습니다.
                 </p>
                 <GeneratorsSettings />
               </section>
@@ -88,21 +88,60 @@ export function SettingsModal({
           </>
         )}
 
-        {tab === 'excel' && (
-          <div className="excel-settings">
-            <p className="hint">
-              한 행 = 한 키워드. 같은 날짜가 반복되어도 정상이며 날짜 셀은 병합하지
-              않습니다.
-            </p>
-            <button className="btn" onClick={onDownloadTemplate}>
-              템플릿 내려받기 (Template)
-            </button>
-            <button className="btn" onClick={onOpenImport}>
-              엑셀 내역 가져오기 (Import)
-            </button>
-            <button className="btn" onClick={onFullExport}>
-              엑셀로 내보내기 (Full Export · 작업 상태 포함)
-            </button>
+        {tab === 'storage' && (
+          <div className="storage-settings">
+            <section className="gs-block">
+              <h4>저장 방식</h4>
+              <label className="gs-radio">
+                <input type="radio" name="storage-mode" checked readOnly />
+                <span>
+                  <b>이 기기에 저장</b> — 데이터는 현재 브라우저(IndexedDB)에
+                  저장됩니다. 회원가입·로그인 없음.
+                </span>
+              </label>
+              <label className="gs-radio is-disabled">
+                <input type="radio" name="storage-mode" disabled />
+                <span>
+                  <b>계정으로 동기화</b> — 여러 기기에서 같은 작업 사용{' '}
+                  <span className="badge badge-muted">준비 중</span>
+                </span>
+              </label>
+              <p className="hint">
+                작업 내용은 이 기기에 자동 저장되며 다른 기기와 자동 동기화되지
+                않습니다. 브라우저 데이터를 삭제하거나 다른 기기·브라우저에서
+                접속하면 저장된 작업이 자동으로 나타나지 않을 수 있습니다. 중요한
+                작업은 Excel로 백업하세요.
+              </p>
+            </section>
+
+            <section className="gs-block">
+              <h4>Excel 백업</h4>
+              <div className="storage-actions">
+                <button className="btn btn-primary" onClick={onFullExport}>
+                  Excel 전체 백업
+                </button>
+                <button className="btn" onClick={onOpenImport}>
+                  Excel 가져오기 (복원)
+                </button>
+                <button className="btn" onClick={onDownloadTemplate}>
+                  템플릿 내려받기
+                </button>
+              </div>
+              <p className="hint">
+                백업 파일에는 Date · Keyword · 생성 · 미캔 · 사용자 정의 체크 항목이
+                포함됩니다. 같은 날짜는 병합 없이 각 행에 반복됩니다.
+              </p>
+            </section>
+
+            <section className="gs-block">
+              <h4>보안</h4>
+              <p className="hint">
+                Direct Generate용 개인 API Key는 <b>이 기기에만</b> 저장되며 Excel
+                백업이나 향후 계정 동기화에 포함되지 않습니다. 다른 기기에서
+                Direct Generate를 쓰려면 그 기기에서 API Key를 다시 등록해야 합니다.
+                (일반 My GPT URL은 비밀값이 아니므로 향후 동기화 대상이 될 수 있습니다.)
+              </p>
+            </section>
           </div>
         )}
       </div>
