@@ -560,9 +560,25 @@ const run = async () => {
     if (!(await gen2.isChecked())) throw new Error('auto-check did not persist')
   })
 
-  await test('Direct Generate: Google (Imagen) provider 선택 → 이미지 표시 (목킹)', async (page) => {
+  await test('Direct Generate: Google provider 선택 → 이미지 표시 (Gemini 목킹)', async (page) => {
     await page.route('**://generativelanguage.googleapis.com/**', (route) => {
-      if (route.request().url().includes(':predict')) {
+      const u = route.request().url()
+      if (u.includes(':generateContent')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [{ inlineData: { mimeType: 'image/png', data: TINY_PNG } }],
+                },
+              },
+            ],
+          }),
+        })
+      }
+      if (u.includes(':predict')) {
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -575,7 +591,6 @@ const run = async () => {
     })
     await boot(page)
     await openGenerationTab(page, 'direct')
-    // Provider select: pick Google
     await page
       .locator('select.field-input')
       .first()

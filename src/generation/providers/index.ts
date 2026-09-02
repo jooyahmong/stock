@@ -5,7 +5,7 @@ import {
   type ProviderType,
 } from '../types'
 import { OpenAiImageProvider } from './openaiImageProvider'
-import { GoogleImageProvider } from './googleImageProvider'
+import { GoogleImageProvider, GOOGLE_MODELS } from './googleImageProvider'
 
 type ProviderFactory = (record: ImageProvider) => ImageGenerationProvider
 
@@ -34,10 +34,6 @@ export const PROVIDER_TYPES: ProviderTypeInfo[] = [
   {
     type: 'google',
     label: 'Google (Gemini / Imagen)',
-    models: [
-      'imagen-3.0-generate-002',
-      'imagen-4.0-generate-001',
-      'gemini-2.5-flash-image-preview',
-    ],
+    models: GOOGLE_MODELS,
   },
 ]

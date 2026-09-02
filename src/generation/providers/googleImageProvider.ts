@@ -10,6 +10,14 @@ import { apiErrorMessage, browserBlockedMessage } from './http'
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
+/** gemini-* first — those work on the free tier; imagen-* needs billing. */
+export const GOOGLE_MODELS = [
+  'gemini-2.5-flash-image-preview',
+  'gemini-2.0-flash-preview-image-generation',
+  'imagen-3.0-generate-002',
+  'imagen-4.0-generate-001',
+]
+
 /**
  * Google — Gemini API image generation.
  *
@@ -30,7 +38,9 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     this.id = record.id
     this.name = record.name
     this.apiKey = record.apiKey.trim()
-    this.model = record.model.trim() || 'imagen-3.0-generate-002'
+    // Default to a model that also works on the FREE Gemini API tier.
+    // Imagen (`imagen-*`) needs a billing-enabled project.
+    this.model = record.model.trim() || 'gemini-2.5-flash-image-preview'
   }
 
   async testConnection(signal?: AbortSignal): Promise<TestConnectionResult> {
@@ -54,6 +64,13 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     return this.model.startsWith('imagen')
       ? this.viaImagen(params)
       : this.viaGemini(params)
+  }
+
+  /** 404 on Google usually means the model isn't available to this key. */
+  private notFoundHint(): string {
+    return this.model.startsWith('imagen')
+      ? ` — Imagen 모델은 결제(빌링)가 활성화된 Google Cloud 프로젝트에서만 사용할 수 있습니다. 무료 키라면 Model을 "gemini-2.5-flash-image-preview" 등 gemini 이미지 모델로 바꾸세요.`
+      : ` — 이 API 키에서 "${this.model}" 모델을 쓸 수 없습니다. Google AI Studio에서 사용 가능한 이미지 모델 ID를 확인해 Model 값을 바꾸세요.`
   }
 
   private aspectRatio(size?: string): string {
@@ -89,7 +106,10 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     } catch (err) {
       throw new GenerationError(browserBlockedMessage(err), err)
     }
-    if (!res.ok) throw new GenerationError(await apiErrorMessage(res))
+    if (!res.ok)
+      throw new GenerationError(
+        (await apiErrorMessage(res)) + (res.status === 404 ? this.notFoundHint() : ""),
+      )
 
     const json = (await res.json()) as {
       predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }>
@@ -123,7 +143,10 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     } catch (err) {
       throw new GenerationError(browserBlockedMessage(err), err)
     }
-    if (!res.ok) throw new GenerationError(await apiErrorMessage(res))
+    if (!res.ok)
+      throw new GenerationError(
+        (await apiErrorMessage(res)) + (res.status === 404 ? this.notFoundHint() : ""),
+      )
 
     const json = (await res.json()) as {
       candidates?: Array<{
@@ -137,11 +160,7 @@ export class GoogleImageProvider implements ImageGenerationProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    return [
-      'imagen-3.0-generate-002',
-      'imagen-4.0-generate-001',
-      'gemini-2.5-flash-image-preview',
-    ]
+    return GOOGLE_MODELS
   }
 
   private result(dataUrl: string): GeneratedImage {
