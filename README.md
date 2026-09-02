@@ -235,6 +235,11 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 
 ## 생성 방식 — Direct Generate + My GPT
 
+> **현재 Direct Generate는 기본 비활성(`VITE_DIRECT_GENERATION` 미설정)입니다.**
+> OpenAI·Gemini/Imagen 이미지 생성 API가 모두 유료(결제) 키를 요구해서 UI에서
+> 숨겨 두었습니다. 지금은 **My GPT만 동작**합니다. 되살리려면 `.env`(또는
+> Cloudflare Pages 환경변수)에 `VITE_DIRECT_GENERATION=true`.
+
 키워드 클릭 시 **Settings > 생성 > 기본 생성 방식**(`direct` | `my-gpt`)에 따라 동작:
 
 - **My GPT** (기본값, API 불필요): 프롬프트를 클립보드에 복사한다.
@@ -288,8 +293,9 @@ src/generation/
   index.ts               앱이 닿는 유일한 barrel
 ```
 
-**끄기**: `.env`에 `VITE_DIRECT_GENERATION=false` → 모든 Direct UI 비표시, 키워드
-클릭은 항상 My GPT.
+**켜기/끄기**: 기본은 **꺼짐**. `.env`(또는 배포 환경변수)에
+`VITE_DIRECT_GENERATION=true` → Direct UI 표시. 값이 없거나 `true`가 아니면 모든
+Direct UI 비표시, API Key 관련 안내 문구도 숨김, 키워드 클릭은 항상 My GPT.
 
 **완전 삭제**: ① `src/generation/` 삭제 ② `src/main.tsx`의 `<GenerationProvider>`
 래퍼 제거 ③ `src/App.tsx`·`src/components/settings/SettingsModal.tsx`의

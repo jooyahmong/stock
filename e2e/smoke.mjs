@@ -70,6 +70,18 @@ async function addKeywordOnDate(page, dateIso, keyword) {
 const ok = (name) => results.push({ name, pass: true })
 const fail = (name, err) => results.push({ name, pass: false, err: String(err && err.stack || err) })
 
+// Direct Generate is behind VITE_DIRECT_GENERATION (default off). Probed in run().
+let DIRECT_ON = false
+
+/** Run a test only when Direct Generate is enabled; otherwise record it skipped. */
+async function testIf(cond, name, fn) {
+  if (!cond) {
+    results.push({ name, pass: true, skipped: true })
+    return
+  }
+  return test(name, fn)
+}
+
 async function test(name, fn) {
   const context = await browser.newContext({
     permissions: ['clipboard-read', 'clipboard-write'],
@@ -123,6 +135,16 @@ function xlsxFile(aoa) {
 
 const run = async () => {
   browser = await chromium.launch()
+
+  // Probe the build's Direct Generate flag so those tests skip cleanly when off.
+  {
+    const ctx = await browser.newContext()
+    const p = await ctx.newPage()
+    await p.goto(BASE, { waitUntil: 'networkidle' })
+    DIRECT_ON = await p.evaluate(() => !!window.__DIRECT_GENERATION__)
+    await ctx.close()
+    console.log(`Direct Generate: ${DIRECT_ON ? 'ON' : 'OFF (관련 테스트 건너뜀)'}`)
+  }
 
   await test('seed = "365 스톡 키워드": 365 groups, 2 kw/day, no sample data', async (page) => {
     await boot(page)
@@ -259,7 +281,11 @@ const run = async () => {
     if (!(await sync.isDisabled()))
       throw new Error('계정 동기화가 선택 가능 상태로 보임 (준비 중이어야 함)')
     await page.getByRole('button', { name: 'Excel 전체 백업' }).waitFor()
-    await page.getByText(/API Key는 이 기기에만/).waitFor()
+    // 보안 문단(개인 API Key 안내)은 Direct Generate가 켜진 경우에만 노출된다.
+    const apiKeyNote = page.getByText(/API Key는 이 기기에만/)
+    if (DIRECT_ON) await apiKeyNote.waitFor()
+    else if (await apiKeyNote.count())
+      throw new Error('Direct Generate가 꺼졌는데 API Key 보안 문단이 보임')
   })
 
   await test('search filters keywords', async (page) => {
@@ -464,7 +490,7 @@ const run = async () => {
     }
   }
 
-  await test('Settings > 생성: 선택한 방식의 설정만 표시', async (page) => {
+  await testIf(DIRECT_ON, 'Settings > 생성: 선택한 방식의 설정만 표시', async (page) => {
     await boot(page)
     await openGenerationTab(page)
     await page.getByText('기본 생성 방식').waitFor()
@@ -485,7 +511,7 @@ const run = async () => {
       throw new Error('My GPT 설정이 direct 모드에서 보임')
   })
 
-  await test('기본=Direct + provider 없음 -> fallback 모달 (API 설정 / My GPT)', async (page) => {
+  await testIf(DIRECT_ON, '기본=Direct + provider 없음 -> fallback 모달 (API 설정 / My GPT)', async (page) => {
     await boot(page)
     await openGenerationTab(page)
     await page
@@ -500,7 +526,7 @@ const run = async () => {
     await page.getByRole('button', { name: 'My GPT 설정' }).waitFor()
   })
 
-  await test('기본=Direct + provider 없음 + My GPT 등록됨 -> My GPT로 열기 동작', async (page, context) => {
+  await testIf(DIRECT_ON, '기본=Direct + provider 없음 + My GPT 등록됨 -> My GPT로 열기 동작', async (page, context) => {
     await stubChatgpt(context)
     await boot(page)
     await openGenerationTab(page)
@@ -525,7 +551,7 @@ const run = async () => {
     if (clip !== SEED_A) throw new Error('clipboard = ' + JSON.stringify(clip))
   })
 
-  await test('Direct Generate 성공 -> 이미지 표시 + "생성" 자동 체크', async (page) => {
+  await testIf(DIRECT_ON, 'Direct Generate 성공 -> 이미지 표시 + "생성" 자동 체크', async (page) => {
     await page.route('**://api.openai.com/v1/images/generations', (route) =>
       route.fulfill({
         status: 200,
@@ -560,7 +586,7 @@ const run = async () => {
     if (!(await gen2.isChecked())) throw new Error('auto-check did not persist')
   })
 
-  await test('Direct Generate: Google provider 선택 → 이미지 표시 (Gemini 목킹)', async (page) => {
+  await testIf(DIRECT_ON, 'Direct Generate: Google provider 선택 → 이미지 표시 (Gemini 목킹)', async (page) => {
     await page.route('**://generativelanguage.googleapis.com/**', (route) => {
       const u = route.request().url()
       if (u.includes(':generateContent')) {
@@ -608,7 +634,7 @@ const run = async () => {
     await page.getByText('"생성" 체크됨').waitFor()
   })
 
-  await test('Direct Generate 실패 -> "생성" 체크 안 함 + 재시도 노출', async (page) => {
+  await testIf(DIRECT_ON, 'Direct Generate 실패 -> "생성" 체크 안 함 + 재시도 노출', async (page) => {
     await page.route('**://api.openai.com/v1/images/generations', (route) =>
       route.fulfill({
         status: 400,
@@ -762,7 +788,7 @@ const run = async () => {
     await page.getByText('프롬프트 복사됨').waitFor()
   })
 
-  await test('Calendar: 키워드 클릭 → 기존 generation handler 재사용 (Direct → GenerateModal)', async (page) => {
+  await testIf(DIRECT_ON, 'Calendar: 키워드 클릭 → 기존 generation handler 재사용 (Direct → GenerateModal)', async (page) => {
     await page.route('**://api.openai.com/v1/images/generations', (route) =>
       route.fulfill({
         status: 200,
@@ -855,12 +881,16 @@ const run = async () => {
 
   // report
   const passed = results.filter((r) => r.pass).length
+  const skipped = results.filter((r) => r.skipped).length
   console.log('\n──────── E2E smoke results ────────')
   for (const r of results) {
-    console.log(`${r.pass ? '✓' : '✗'} ${r.name}`)
+    const mark = r.skipped ? '–' : r.pass ? '✓' : '✗'
+    console.log(`${mark} ${r.name}${r.skipped ? ' (skipped: Direct Generate off)' : ''}`)
     if (!r.pass) console.log('   ' + r.err.split('\n').slice(0, 3).join('\n   '))
   }
-  console.log(`\n${passed}/${results.length} passed`)
+  console.log(
+    `\n${passed}/${results.length} passed${skipped ? ` (${skipped} skipped)` : ''}`,
+  )
   process.exit(passed === results.length ? 0 : 1)
 }
 

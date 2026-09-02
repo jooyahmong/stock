@@ -133,15 +133,18 @@ export function SettingsModal({
               </p>
             </section>
 
-            <section className="gs-block">
-              <h4>보안</h4>
-              <p className="hint">
-                Direct Generate용 개인 API Key는 <b>이 기기에만</b> 저장되며 Excel
-                백업이나 향후 계정 동기화에 포함되지 않습니다. 다른 기기에서
-                Direct Generate를 쓰려면 그 기기에서 API Key를 다시 등록해야 합니다.
-                (일반 My GPT URL은 비밀값이 아니므로 향후 동기화 대상이 될 수 있습니다.)
-              </p>
-            </section>
+            {directGenerationEnabled && (
+              <section className="gs-block">
+                <h4>보안</h4>
+                <p className="hint">
+                  Direct Generate용 개인 API Key는 <b>이 기기에만</b> 저장되며 Excel
+                  백업이나 향후 계정 동기화에 포함되지 않습니다. 다른 기기에서
+                  Direct Generate를 쓰려면 그 기기에서 API Key를 다시 등록해야
+                  합니다. (일반 My GPT URL은 비밀값이 아니므로 향후 동기화 대상이 될
+                  수 있습니다.)
+                </p>
+              </section>
+            )}
           </div>
         )}
       </div>

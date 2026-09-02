@@ -444,8 +444,18 @@ function DataNoticeModal({ onClose }: { onClose: () => void }) {
         </li>
         <li>계획·키워드 데이터를 우리 서버로 전송·수집하지 않습니다.</li>
         <li>
-          My GPT 링크와 Direct Generate API Key도 이 브라우저에만 저장됩니다. 키워드
-          클릭 시 사용자가 지정한 GPT / OpenAI 주소로만 직접 요청이 전송됩니다.
+          {directGenerationEnabled ? (
+            <>
+              My GPT 링크와 Direct Generate API Key도 이 브라우저에만 저장됩니다.
+              키워드 클릭 시 사용자가 지정한 GPT / OpenAI 주소로만 직접 요청이
+              전송됩니다.
+            </>
+          ) : (
+            <>
+              My GPT 링크도 이 브라우저에만 저장됩니다. 키워드 클릭 시 사용자가
+              지정한 GPT 주소로만 직접 요청이 전송됩니다.
+            </>
+          )}
         </li>
         <li>
           데이터를 지우려면 브라우저의 사이트 데이터 삭제, 또는 개발자 콘솔에서{' '}
