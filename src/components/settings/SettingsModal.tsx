@@ -102,8 +102,8 @@ export function SettingsModal({
               <label className="gs-radio is-disabled">
                 <input type="radio" name="storage-mode" disabled />
                 <span>
-                  <b>계정으로 동기화</b> — 여러 기기에서 같은 작업 사용{' '}
-                  <span className="badge badge-muted">준비 중</span>
+                  <b>여러 기기에서 동기화</b> — 이메일로 링크를 받아 클릭한
+                  기기끼리 자동 동기화 <span className="badge badge-muted">준비 중</span>
                 </span>
               </label>
               <p className="hint">

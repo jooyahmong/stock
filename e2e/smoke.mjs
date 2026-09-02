@@ -276,10 +276,10 @@ const run = async () => {
     await page.locator('.settings-tabs button', { hasText: '저장 · 백업' }).click()
     await page.getByText('이 기기에 저장').waitFor()
     const sync = page
-      .locator('.gs-radio', { hasText: '계정으로 동기화' })
+      .locator('.gs-radio', { hasText: '여러 기기에서 동기화' })
       .locator('input')
     if (!(await sync.isDisabled()))
-      throw new Error('계정 동기화가 선택 가능 상태로 보임 (준비 중이어야 함)')
+      throw new Error('동기화 옵션이 선택 가능 상태로 보임 (준비 중이어야 함)')
     await page.getByRole('button', { name: 'Excel 전체 백업' }).waitFor()
     // 보안 문단(개인 API Key 안내)은 Direct Generate가 켜진 경우에만 노출된다.
     const apiKeyNote = page.getByText(/API Key는 이 기기에만/)
