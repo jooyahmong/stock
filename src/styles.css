@@ -231,6 +231,11 @@ input[type='radio'] {
   border-color: var(--danger);
   color: #fff;
 }
+.btn-danger:hover {
+  background: var(--coral-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .btn-gpt {
   background: var(--coral-soft);
   border-color: var(--coral);
