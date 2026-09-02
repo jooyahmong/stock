@@ -91,26 +91,13 @@ export function SettingsModal({
         {tab === 'storage' && (
           <div className="storage-settings">
             <section className="gs-block">
-              <h4>저장 방식</h4>
-              <label className="gs-radio">
-                <input type="radio" name="storage-mode" checked readOnly />
-                <span>
-                  <b>이 기기에 저장</b> — 데이터는 현재 브라우저(IndexedDB)에
-                  저장됩니다. 회원가입·로그인 없음.
-                </span>
-              </label>
-              <label className="gs-radio is-disabled">
-                <input type="radio" name="storage-mode" disabled />
-                <span>
-                  <b>여러 기기에서 동기화</b> — 링크(키)를 다른 기기에 입력하면
-                  자동 동기화 <span className="badge badge-muted">준비 중</span>
-                </span>
-              </label>
+              <h4>저장 위치</h4>
               <p className="hint">
-                작업 내용은 이 기기에 자동 저장되며 다른 기기와 자동 동기화되지
-                않습니다. 브라우저 데이터를 삭제하거나 다른 기기·브라우저에서
+                작업 내용은 <b>이 기기의 브라우저(IndexedDB)</b>에 자동
+                저장됩니다. 회원가입·로그인 없음. 다른 기기와 자동 동기화되지
+                않으니, 브라우저 데이터를 삭제하거나 다른 기기·브라우저에서
                 접속하면 저장된 작업이 자동으로 나타나지 않을 수 있습니다. 중요한
-                작업은 Excel로 백업하세요.
+                작업은 아래 Excel로 백업하세요.
               </p>
             </section>
 
