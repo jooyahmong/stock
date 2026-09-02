@@ -13,11 +13,10 @@ const TYPE_LABEL: Record<PlanType, string> = {
   custom: '내 계획',
 }
 
+// V1은 날짜 계획만 제공한다. 주간/월간은 보류(타입 정의·순수 함수는 유지).
 const TYPE_OPTIONS: { type: PlanType; label: string; hint: string }[] = [
   { type: '365', label: '365일 (날짜)', hint: 'YYYY-MM-DD · 달력 보기 지원' },
   { type: 'custom', label: '내 계획 (날짜)', hint: '자유 날짜 계획 · 달력 보기 지원' },
-  { type: 'weekly', label: '주간', hint: 'YYYY-Www' },
-  { type: 'monthly', label: '월간', hint: 'YYYY-MM' },
 ]
 
 export function PlanBar({

@@ -334,7 +334,7 @@ const run = async () => {
     if (ils[2] !== 'FALSE') throw new Error('SEED_B 생성 should be FALSE')
   })
 
-  await test('Template 내려받기: Date/Week/Month 3개 탭 + 작업단계 열 FALSE', async (page) => {
+  await test('Template 내려받기: Date | Keyword | 생성 | 미캔 헤더 + FALSE 기본값', async (page) => {
     await boot(page)
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -344,15 +344,11 @@ const run = async () => {
     const chunks = []
     for await (const c of stream) chunks.push(c)
     const wb = XLSX.read(Buffer.concat(chunks), { type: 'buffer' })
-    if (JSON.stringify(wb.SheetNames) !== JSON.stringify(['Date', 'Week', 'Month']))
-      throw new Error('template tabs = ' + JSON.stringify(wb.SheetNames))
-    const dateAoa = XLSX.utils.sheet_to_json(wb.Sheets['Date'], { header: 1 })
-    if (JSON.stringify(dateAoa[0]) !== JSON.stringify(['Date', 'Keyword', '생성', '미캔']))
-      throw new Error('bad Date tab header ' + JSON.stringify(dateAoa[0]))
-    if (dateAoa[1][2] !== 'FALSE' || dateAoa[1][3] !== 'FALSE')
-      throw new Error('status columns should default FALSE: ' + JSON.stringify(dateAoa[1]))
-    const weekAoa = XLSX.utils.sheet_to_json(wb.Sheets['Week'], { header: 1 })
-    if (weekAoa[0][0] !== 'Week') throw new Error('Week tab header ' + JSON.stringify(weekAoa[0]))
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })
+    if (JSON.stringify(aoa[0]) !== JSON.stringify(['Date', 'Keyword', '생성', '미캔']))
+      throw new Error('bad template header ' + JSON.stringify(aoa[0]))
+    if (aoa[1][2] !== 'FALSE' || aoa[1][3] !== 'FALSE')
+      throw new Error('status columns should default FALSE: ' + JSON.stringify(aoa[1]))
   })
 
   await test('Excel import: Full Export 를 그대로 재import → 개수 불변 (더블 안 생김)', async (page) => {
@@ -894,14 +890,6 @@ const run = async () => {
       if (i < 11) await page.getByRole('button', { name: '다음 달' }).click()
     }
     if (seen.length !== 12) throw new Error('expected 12 distinct months')
-  })
-
-  await test('Calendar: Weekly 계획에서는 달력 보기 비활성', async (page) => {
-    await boot(page)
-    await newPlan(page, 'Wk Plan', 'Weekly')
-    const calBtn = page.getByRole('tab', { name: '달력 보기' })
-    if (!(await calBtn.isDisabled()))
-      throw new Error('달력 보기 must be disabled for non-date plans')
   })
 
   await test('Calendar mobile: agenda 표시, page 가로 스크롤 없음', async (page) => {

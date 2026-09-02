@@ -286,7 +286,7 @@ export default function App() {
                 onOpenSettings={() => setShowSettings(true)}
                 onAddPeriod={() => setAddingPeriod(true)}
                 periodNoun={periodNoun(kind)}
-                onDownloadTemplate={() => downloadTemplate(snapshot.statusColumns)}
+                onDownloadTemplate={() => downloadTemplate(activePlan, snapshot.statusColumns)}
                 onFullExport={() => {
                   downloadFullExport(activePlan, snapshot)
                   useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
@@ -384,7 +384,7 @@ export default function App() {
             setShowSettings(false)
             setShowImport(true)
           }}
-          onDownloadTemplate={() => downloadTemplate(snapshot.statusColumns)}
+          onDownloadTemplate={() => downloadTemplate(activePlan, snapshot.statusColumns)}
           onFullExport={() => {
             downloadFullExport(activePlan, snapshot)
             useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')

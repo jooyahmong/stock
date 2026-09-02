@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx'
 import {
   parseImportFile,
   buildTemplateWorkbook,
-  buildTemplateWorkbookAllKinds,
   buildFullExportWorkbook,
 } from '../excel'
 import type { KeywordItem, StatusColumn } from '../../repo/types'
@@ -183,30 +182,6 @@ describe('template + full export round-trip', () => {
     })
     expect(aoa[0]).toEqual(['Date', 'Keyword', '생성', '미캔'])
     expect(aoa[1]).toEqual(['2027-01-01', '떡국', 'FALSE', 'FALSE'])
-  })
-
-  it('all-kinds template = one file, Date / Week / Month tabs', () => {
-    const buf = buildTemplateWorkbookAllKinds([{ name: '생성' }])
-    const wb = XLSX.read(buf, { type: 'array' })
-    expect(wb.SheetNames).toEqual(['Date', 'Week', 'Month'])
-    const week = XLSX.utils.sheet_to_json<string[]>(wb.Sheets['Week'], { header: 1 })
-    expect(week[0]).toEqual(['Week', 'Keyword', '생성'])
-    expect(week[1]).toEqual(['2027-W01', 'New Year', 'FALSE'])
-  })
-
-  it('import reads the tab matching the plan kind from an all-kinds file', async () => {
-    const buf = buildTemplateWorkbookAllKinds([])
-    const preview = await parseImportFile(new File([buf], 't.xlsx'), {
-      kind: 'month',
-      existingKeywords: [],
-      statusColumns: NO_STATUS,
-    })
-    expect(preview.ok).toBe(true)
-    expect(preview.rows.map((r) => r.period)).toEqual([
-      '2027-01',
-      '2027-01',
-      '2027-02',
-    ])
   })
 
   it('full export writes one row per keyword with TRUE/FALSE and no merged dates', () => {

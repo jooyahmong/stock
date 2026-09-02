@@ -1,8 +1,9 @@
 # WOOJOO Stock Planner — stock.woojooland.com
 
 **WOOJOO Stock Planner** — Stock Content Planner + Production Tracker.
-365일 / 주간 / 월간 스톡 이미지 키워드를 관리하고, 키워드별 제작·작업 상태를
+365일 날짜 기반 스톡 이미지 키워드를 관리하고, 키워드별 제작·작업 상태를
 체크하며, 사용자가 지정한 GPT/GPTs로 연결한다. AI 이미지 생성 사이트가 아니다.
+(주간·월간 계획은 보류 — 순수 함수만 남겨 둠.)
 
 > 로컬 개발 단계(V1). 운영 배포 / Cloudflare / DNS는 요청 전까지 건드리지 않는다.
 
@@ -155,8 +156,11 @@ V1은 ① 로컬 + My GPT 링크만. (회원가입·비밀번호·OAuth·이메�
 
 - **계획 유형 탭 제거**: 상단의 `365 Days / Weekly / Monthly / My Plan` 탭을 없앴다.
   대부분 계획이 하나뿐이라 빈 탭이 부담이었다. 대신 계획 `<select>`(2개 이상일 때)
-  + `+ 새 계획`. 유형은 **생성 시 라디오로 선택**(날짜 365 / 날짜 내 계획 / 주간 /
-  월간)하고 이름 옆 배지로 표시. 유형은 여전히 기간 형식·달력 가능 여부를 결정한다.
+  + `+ 새 계획`. 유형은 **생성 시 라디오로 선택**하고 이름 옆 배지로 표시.
+- **V1은 날짜 계획만**: 새 계획 유형은 `365일(날짜)` / `내 계획(날짜)` 둘뿐.
+  `weekly` / `monthly` 는 보류 — `PlanType` 타입·`periodKind`·`normalizePeriod`
+  등 순수 함수와 그 단위 테스트는 남겨 두어(재추가 = `PlanBar` `TYPE_OPTIONS`에
+  2줄), 다만 UI에서 만들 수 없다. 기존 weekly/monthly 데이터는 그대로 렌더된다.
 - **브랜드**: `public/logo.png`(헤더 워드마크), `public/favicon.ico`. 색상은 로고에서
   추출 — 바이올렛 `#6b4df5`(기본), 코랄 `#f4695a`(오늘·강조), 상단 그라데이션 스트립,
   진행바 그라데이션, 체크박스 `accent-color`. 과한 장식은 피함(생산성 도구).
@@ -198,8 +202,8 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
   전체 문자열은 `title`(hover)과 상세 모달에서 확인.
 - 키워드 클릭은 목록 보기와 **완전히 동일한 `onRun` 핸들러**를 재사용 (Direct 기본
   → GenerateModal, My GPT 기본 → 복사 + GPT 탭). 생성 로직 복제 없음.
-- 날짜 기반(`365`/`My Plan`) 계획에서만 사용. `weekly`/`monthly`에서는 달력 탭
-  비활성 + 안내.
+- 모든 계획이 날짜 기반이라 항상 사용 가능. (`calendarAvailable = kind === 'date'`
+  가드는 남아 있음 — weekly/monthly 재추가 시 자동 적용.)
 - 모바일(≤640px)은 7열을 억지로 줄이지 않고 **agenda 리스트**(키워드 있는 날만)로
   전환. page-level 가로 스크롤 없음.
 
@@ -241,11 +245,10 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 
 ## Excel
 
-- **Template**: 한 파일에 **`Date` / `Week` / `Month` 세 탭** — 계획을 바꾸지
-  않아도 모든 유형의 양식을 받는다. 각 탭은 `<기준> | Keyword | <작업단계 열…>`
-  로 **Full Export와 동일한 열 구조**, 작업단계는 `FALSE` 기본값 + 예시 행 3개.
-  가져올 때 현재 계획 유형에 맞는 탭을 자동으로 읽는다(`parseImportFile` →
-  `TAB_NAME[kind]`, 없으면 첫 시트). `buildTemplateWorkbookAllKinds()`.
+- **Template**: `<Date> | Keyword | <작업단계 열…>` — **Full Export와 동일한 열
+  구조**. 작업단계 열은 `FALSE` 기본값 + 예시 행 3개. (V1은 날짜 계획만이라
+  단일 시트. `buildTemplateWorkbook(kind, cols)` 는 주간/월간도 만들 수 있게
+  남겨 둠.)
 - **Import (Upsert)**: 첫 시트만. 기준 열 + `Keyword` 열 필요. 확장 열(생성/미캔/
   사용자 단계)은 기존 작업단계 이름과 대소문자 무시 매칭되면 자동 인식.
   - **같은 `기준값 + Keyword` = 기존 항목**으로 보고 그 행의 체크값을 시트대로
@@ -349,7 +352,7 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
   없음·완전 동일 중복 0·결정론·(월,일) 루프·Valentine 12-01/12-14·Christmas ~10월·
   Halloween ~8월·New Year ~11월·이벤트 당일 배치 안 함·이동형 이벤트 실제 날짜·
   단어 위주 2~7어절·서술형 없음·한정어 <40%·브랜드명 제외·윤년 창도 365/730).
-- **E2E (Playwright, headless Chromium) — 35/35 통과 (Direct Generate off 시 7 skip)**:
+- **E2E (Playwright, headless Chromium) — 34/34 통과 (Direct Generate off 시 7 skip)**:
   기본 365팩 렌더(창 windowed → 전체 보기 시 365그룹/730행/한국어), **목록 날짜 창**,
   작업체크 IndexedDB 영속, 선택체크 ↔ 작업체크 독립, **날짜 그룹에 선택 체크박스 없음**,
   **전체 선택(보이는 키워드만) + SelectionBar**, 키워드 추가, 체크 항목 추가,
@@ -362,7 +365,7 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
   "생성" 자동 체크 + 영속, Direct 실패 → 체크 안 함, 모바일 가로 오버플로 없음,
   **Calendar**: 7열 grid + 과거 ○/×, 오늘·미래 마크 없음, 긴 키워드 ellipsis+title,
   하루 4개↑ → +N개 → 상세 모달, 캘린더 키워드 클릭 → 동일 generation handler,
-  이전/다음 달 + [오늘], Weekly 계획에서 달력 탭 비활성, 모바일 agenda.
+  이전/다음 달 + [오늘], 모바일 agenda.
 
 수동 확인 권장: Tablet 폭, 작업단계 6~7개일 때 데스크톱 정렬, 팝업 차단 브라우저
 설정에서의 토스트 안내.
@@ -377,8 +380,8 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
 - 번들 712KB(gzip 237KB) — 대부분 `xlsx`. Import/Export 시 `import()`로 지연 로딩하면
   초기 로드를 크게 줄일 수 있다(Phase 2).
 - 작업단계 순서 변경은 ↑/↓ 버튼(드래그 핸들은 시각 표시만). 드래그 정렬은 후속.
-- 빈 기간("+ 날짜/주/월 추가"로 만든 키워드 0개 그룹)은 `AppSetting`에 저장된다.
-  버튼 라벨은 계획 유형에 따라 `날짜`/`주`/`월`(`periodNoun`).
+- 빈 기간("+ 날짜 추가"로 만든 키워드 0개 그룹)은 `AppSetting`에 저장된다.
+  버튼 라벨은 `periodNoun(kind)` — 날짜 계획만 있는 V1에선 항상 "날짜".
 - 목록 보기는 기본적으로 오늘 주변 2주만 렌더(위 "목록 보기 날짜 창"). `전체 보기`로
   365그룹/730행을 한 번에 그리면 초기 렌더가 수백 ms 걸린다 — 대규모 플랜은 달력
   보기·검색·날짜 창으로 탐색 권장. 가상 스크롤은 후속.
