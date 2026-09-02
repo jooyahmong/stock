@@ -116,10 +116,12 @@ export function SettingsModal({
                 </button>
               </div>
               <p className="hint">
-                파일 열은 <b>{periodColumnLabel(periodKind(plan.type))} · Keyword ·
-                생성 · 미캔 · 사용자 정의 체크 항목</b>입니다(템플릿·백업 동일 구조).
-                같은 날짜는 병합 없이 각 행에 반복됩니다. 가져오기 시 같은
-                날짜+Keyword는 기존 항목의 체크값을 그대로 덮어씁니다.
+                템플릿은 <b>일간(Date) · 주간(Week) · 월간(Month)</b> 세 탭이 한
+                파일에 들어 있습니다. 가져오기 시 현재 계획 유형(
+                <b>{periodColumnLabel(periodKind(plan.type))}</b>)에 맞는 탭을
+                자동으로 읽습니다. 열은 <b>기준 · Keyword · 생성 · 미캔 · 사용자
+                정의 체크 항목</b>으로 백업 파일과 동일하며, 같은 기준값+Keyword는
+                기존 항목의 체크값을 그대로 덮어씁니다(중복 생성 안 함).
               </p>
             </section>
 

@@ -241,9 +241,11 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 
 ## Excel
 
-- **Template**: `<Date|Week|Month> | Keyword | <작업단계 열…>` — **Full Export와
-  동일한 열 구조**. 작업단계 열은 `FALSE` 기본값 + 예시 행 3개. 일간·주간·월간
-  각 유형에 맞는 헤더로 내려받는다.
+- **Template**: 한 파일에 **`Date` / `Week` / `Month` 세 탭** — 계획을 바꾸지
+  않아도 모든 유형의 양식을 받는다. 각 탭은 `<기준> | Keyword | <작업단계 열…>`
+  로 **Full Export와 동일한 열 구조**, 작업단계는 `FALSE` 기본값 + 예시 행 3개.
+  가져올 때 현재 계획 유형에 맞는 탭을 자동으로 읽는다(`parseImportFile` →
+  `TAB_NAME[kind]`, 없으면 첫 시트). `buildTemplateWorkbookAllKinds()`.
 - **Import (Upsert)**: 첫 시트만. 기준 열 + `Keyword` 열 필요. 확장 열(생성/미캔/
   사용자 단계)은 기존 작업단계 이름과 대소문자 무시 매칭되면 자동 인식.
   - **같은 `기준값 + Keyword` = 기존 항목**으로 보고 그 행의 체크값을 시트대로

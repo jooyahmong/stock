@@ -1,6 +1,9 @@
 import type { Plan, PlanSnapshot, StatusColumn } from '../repo/types'
 import { periodKind } from '../domain/periods'
-import { buildTemplateWorkbook, buildFullExportWorkbook } from '../domain/excel'
+import {
+  buildTemplateWorkbookAllKinds,
+  buildFullExportWorkbook,
+} from '../domain/excel'
 import { downloadBlob } from './download'
 
 export const XLSX_MIME =
@@ -10,12 +13,15 @@ function safeName(s: string) {
   return s.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'plan'
 }
 
-export function downloadTemplateFor(plan: Plan, statusColumns: StatusColumn[]): void {
-  const kind = periodKind(plan.type)
+/**
+ * One file, three tabs (Date / Week / Month) — every plan type has a template
+ * without switching plans. Status columns come from the current plan.
+ */
+export function downloadTemplate(statusColumns: StatusColumn[]): void {
   const cols = [...statusColumns].sort((a, b) => a.order - b.order)
   downloadBlob(
-    buildTemplateWorkbook(kind, cols),
-    `stock-template-${kind}.xlsx`,
+    buildTemplateWorkbookAllKinds(cols),
+    'stock-template.xlsx',
     XLSX_MIME,
   )
 }
