@@ -6,7 +6,6 @@ export function Toolbar({
   onOpenImport,
   onOpenSettings,
   onAddPeriod,
-  onDownloadTemplate,
   onFullExport,
   onOpenGpt,
   visibleCount,
@@ -17,7 +16,6 @@ export function Toolbar({
   onOpenImport: () => void
   onOpenSettings: () => void
   onAddPeriod: () => void
-  onDownloadTemplate: () => void
   onFullExport: () => void
   onOpenGpt?: () => void
   visibleCount: number
@@ -86,9 +84,6 @@ export function Toolbar({
       )}
       <button className="btn btn-sm" onClick={onAddPeriod}>
         + 기간 추가
-      </button>
-      <button className="btn btn-sm" onClick={onDownloadTemplate}>
-        Template
       </button>
       <button className="btn btn-sm" onClick={onOpenImport}>
         Import Excel

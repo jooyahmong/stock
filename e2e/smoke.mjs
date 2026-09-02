@@ -334,20 +334,6 @@ const run = async () => {
     if (ils[2] !== 'FALSE') throw new Error('SEED_B 생성 should be FALSE')
   })
 
-  await test('Download Template has Date | Keyword header', async (page) => {
-    await boot(page)
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Template', exact: true }).click(),
-    ])
-    const stream = await download.createReadStream()
-    const chunks = []
-    for await (const c of stream) chunks.push(c)
-    const wb = XLSX.read(Buffer.concat(chunks), { type: 'buffer' })
-    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })
-    if (JSON.stringify(aoa[0]) !== JSON.stringify(['Date', 'Keyword']))
-      throw new Error('bad template header ' + JSON.stringify(aoa[0]))
-  })
 
   await test('Excel import: repeated dates, empty keyword, bad date -> preview + commit', async (page) => {
     await boot(page)

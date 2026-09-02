@@ -241,7 +241,9 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 
 ## Excel
 
-- **Template**: `<Date|Week|Month> | Keyword` + 예시 행 3개.
+- **Template**: V1 UI에서 제외. `buildTemplateWorkbook`(`domain/excel.ts`) 함수와
+  테스트는 남겨 두어 재노출은 버튼 한 줄이면 됨. 지금은 **Full Export** 파일이
+  같은 열 구조(채워진 상태)라 그걸 편집해 Import 하면 됨.
 - **Import**: 첫 시트만. 기준 열 + `Keyword` 열 필요. 확장 열(생성/미캔/사용자 단계)은
   기존 작업단계 이름과 대소문자 무시 매칭되면 자동 인식. 미리보기에서
   `새 항목 / 중복 가능 / 오류 / 무시된 빈 행` 카운트 표시 후 [가져오기].
@@ -342,8 +344,8 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
   → 전체 보기 시 365그룹/730행/한국어), **목록 날짜 창**, 작업체크 IndexedDB 영속,
   선택체크 ↔ 작업체크 독립, **날짜 그룹에 선택 체크박스 없음**, **전체 선택(보이는
   키워드만) + SelectionBar**, 키워드 추가, 체크 항목 추가, **저장 · 백업 탭(Local
-  안내·Excel 백업·동기화 준비 중)**, 검색, 상태 필터, Full Export 내용 검증(같은
-  날짜 2행), Template, Excel Import, My GPT 클릭마다 새 탭 + 복사·**GPT 열기 버튼**·
+  안내·Excel 백업, 동기화 옵션 없음)**, 검색, 상태 필터, Full Export 내용 검증(같은
+  날짜 2행), Excel Import, My GPT 클릭마다 새 탭 + 복사·**GPT 열기 버튼**·
   **URL 검증**, Generator 미설정 경고,
   Settings 생성 탭, Direct fallback 모달·My GPT 전환, Direct 성공(목킹) → 이미지 +
   "생성" 자동 체크 + 영속, Direct 실패 → 체크 안 함, 모바일 가로 오버플로 없음,

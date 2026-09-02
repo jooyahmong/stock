@@ -11,7 +11,7 @@ import {
 } from './domain/periods'
 import { groupKeywords } from './domain/grouping'
 import { findGeneratedColumn } from './domain/statusColumns'
-import { downloadTemplateFor, downloadFullExport } from './lib/planExcel'
+import { downloadFullExport } from './lib/planExcel'
 import { openGptWindow } from './lib/clipboard'
 import { isAllowedGptUrl } from './lib/gptUrl'
 import { readViewMode, writeViewMode, type ViewMode } from './lib/viewModePref'
@@ -284,7 +284,6 @@ export default function App() {
                 onOpenImport={() => setShowImport(true)}
                 onOpenSettings={() => setShowSettings(true)}
                 onAddPeriod={() => setAddingPeriod(true)}
-                onDownloadTemplate={() => downloadTemplateFor(activePlan)}
                 onFullExport={() => {
                   downloadFullExport(activePlan, snapshot)
                   useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
@@ -382,7 +381,6 @@ export default function App() {
             setShowSettings(false)
             setShowImport(true)
           }}
-          onDownloadTemplate={() => downloadTemplateFor(activePlan)}
           onFullExport={() => {
             downloadFullExport(activePlan, snapshot)
             useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')

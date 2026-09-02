@@ -17,14 +17,12 @@ export function SettingsModal({
   snapshot,
   onClose,
   onOpenImport,
-  onDownloadTemplate,
   onFullExport,
 }: {
   plan: Plan
   snapshot: PlanSnapshot
   onClose: () => void
   onOpenImport: () => void
-  onDownloadTemplate: () => void
   onFullExport: () => void
 }) {
   const [tab, setTab] = useState<Tab>('generator')
@@ -109,9 +107,6 @@ export function SettingsModal({
                 </button>
                 <button className="btn" onClick={onOpenImport}>
                   Excel 가져오기 (복원)
-                </button>
-                <button className="btn" onClick={onDownloadTemplate}>
-                  템플릿 내려받기
                 </button>
               </div>
               <p className="hint">
