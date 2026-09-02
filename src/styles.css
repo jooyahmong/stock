@@ -852,6 +852,58 @@ input[type='radio'] {
   font-size: 12px;
 }
 
+/* ---------- help modal ---------- */
+.help-body {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.help-steps {
+  margin: 0 0 16px;
+  padding-left: 18px;
+}
+.help-steps li {
+  margin-bottom: 8px;
+}
+.help-body h4 {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  color: var(--accent);
+}
+.help-gpts ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.help-gpts li {
+  margin-bottom: 6px;
+}
+.help-quote {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--bg-sunk);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-style: normal;
+  color: var(--text);
+}
+.help-sample-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  margin: 4px auto 0;
+  aspect-ratio: 680 / 926;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-sunk);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.help-sample-frame:hover {
+  background: var(--coral-soft);
+}
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed;
@@ -1002,14 +1054,16 @@ input[type='radio'] {
 }
 .cal-mark {
   flex: none;
-  font-weight: 700;
-  font-size: 11px;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  -webkit-text-stroke: 1.4px currentColor;
 }
 .cal-mark-done {
-  color: var(--ok);
+  color: #1565ff; /* 두꺼운 파란 O */
 }
 .cal-mark-missing {
-  color: var(--danger);
+  color: #e5252b; /* 두꺼운 빨간 X */
 }
 .cal-more {
   align-self: flex-start;

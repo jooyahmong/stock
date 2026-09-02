@@ -29,7 +29,7 @@ export function CalendarKeywordLine({
           className={`cal-mark cal-mark-${mark}`}
           aria-label={mark === 'done' ? '생성 완료' : '미생성'}
         >
-          {mark === 'done' ? '○' : '×'}
+          {mark === 'done' ? '◯' : '✕'}
         </span>
       )}
       <span className="cal-kw-text">{keyword}</span>

@@ -258,6 +258,17 @@ const run = async () => {
     await row.locator('.status-check', { hasText: 'Adobe Stock' }).waitFor()
   })
 
+  await test('푸터 "사용법": GPTs 안내 + 지침 예시 + 샘플 영상 자리', async (page) => {
+    await boot(page)
+    await page.getByRole('button', { name: '사용법' }).click()
+    await page.getByText('ChatGPT Plus 이상').waitFor()
+    await page.getByText('심플한 2D 벡터 스타일').waitFor()
+    const sample = page.locator('.help-sample-frame')
+    await sample.waitFor()
+    const href = await sample.getAttribute('href')
+    if (!href || !href.includes('canva')) throw new Error('sample link missing: ' + href)
+  })
+
   await test('Settings > 저장 · 백업: Local 안내 + Excel 백업 (동기화 옵션 없음)', async (page) => {
     await boot(page)
     await page.getByRole('button', { name: '⚙ 설정' }).click()

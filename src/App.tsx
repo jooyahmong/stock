@@ -117,6 +117,7 @@ export default function App() {
   const [showImport, setShowImport] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showDataNotice, setShowDataNotice] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [addingPeriod, setAddingPeriod] = useState(false)
   const [editingPeriod, setEditingPeriod] = useState<string | null>(null)
   const [generateFor, setGenerateFor] = useState<{ keyword: string; id: string } | null>(
@@ -423,15 +424,85 @@ export default function App() {
       <footer className="app-footer">
         <span>© {new Date().getFullYear()} WOOJOO Stock Planner</span>
         <span aria-hidden>·</span>
+        <button className="linkish" onClick={() => setShowHelp(true)}>
+          사용법
+        </button>
+        <span aria-hidden>·</span>
         <button className="linkish" onClick={() => setShowDataNotice(true)}>
           데이터 처리 안내
         </button>
       </footer>
 
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       {showDataNotice && <DataNoticeModal onClose={() => setShowDataNotice(false)} />}
 
       <Toast />
     </div>
+  )
+}
+
+const SAMPLE_VIDEO_URL = 'https://canva.link/b5hfb2is2lz45zd'
+
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal title="사용법" onClose={onClose} width={560}>
+      <div className="help-body">
+        <ol className="help-steps">
+          <li>
+            <b>키워드 확인</b> — 목록에 오늘 기준 365일 스톡 키워드가 날짜별로
+            들어 있습니다. 자유롭게 수정·추가(+ 날짜 추가)·삭제하세요.
+          </li>
+          <li>
+            <b>내 GPT 연결</b> — 설정 → 생성 → My GPT에 ChatGPT/GPTs 링크를
+            저장합니다. 키워드를 클릭하면 프롬프트가 복사되고 그 링크가 새 탭으로
+            열립니다. 거기에 붙여넣어 이미지를 생성하세요(자동 전송은 안 함).
+          </li>
+          <li>
+            <b>진행 체크</b> — 각 키워드의 <b>생성 / 미캔</b> 체크박스로 상태를
+            표시합니다. 체크 항목은 설정 → 체크 항목에서 추가할 수 있습니다.
+          </li>
+          <li>
+            <b>달력 보기</b> — 월별 진행 현황. <b>생성</b>을 체크하면 날짜와
+            무관하게 바로 <b>○</b>, 지난 날짜인데 미체크면 <b>×</b>.
+          </li>
+          <li>
+            <b>백업</b> — 데이터는 이 브라우저에만 저장됩니다. 툴바의 <b>Full
+            Export</b>로 Excel 백업, <b>Import Excel</b>로 복원(같은 날짜+키워드는
+            체크값을 덮어씀). <b>Template</b>로 빈 양식을 받을 수 있습니다.
+          </li>
+        </ol>
+
+        <section className="help-gpts">
+          <h4>GPTs 안내</h4>
+          <ul>
+            <li>
+              GPTs는 <b>ChatGPT Plus 이상</b>에서만 만들 수 있고, <b>다른 사람과
+              공유되지 않습니다</b>(본인 계정에서만 사용).
+            </li>
+            <li>
+              샘플 영상에 쓰인 GPTs 지침 예시:
+              <blockquote className="help-quote">
+                키워드를 치면 심플한 2D 벡터 스타일의 그림을 그려주세요. 그림자
+                없기, 하얀 배경.
+              </blockquote>
+            </li>
+          </ul>
+        </section>
+
+        <section className="help-sample">
+          <h4>샘플 영상</h4>
+          {/* 680×926 세로 영상 자리. 나중에 iframe 임베드로 교체 가능. */}
+          <a
+            className="help-sample-frame"
+            href={SAMPLE_VIDEO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span>▶ 샘플 영상 보기 (Canva)</span>
+          </a>
+        </section>
+      </div>
+    </Modal>
   )
 }
 
