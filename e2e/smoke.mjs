@@ -29,22 +29,10 @@ const ymd = (d) =>
     d.getDate(),
   ).padStart(2, '0')}`
 
-const PLAN_TYPE_LABEL = {
-  Weekly: '주간',
-  Monthly: '월간',
-  '365': '365일 (날짜)',
-  custom: '내 계획 (날짜)',
-}
-
-async function newPlan(page, name, type) {
+// V1: 계획 유형 선택 없음 — 모든 계획은 날짜(365) 기반.
+async function newPlan(page, name) {
   await page.getByRole('button', { name: '+ 새 계획' }).click()
   await page.locator('.modal .field-input').fill(name)
-  if (type) {
-    await page
-      .locator('.type-option', { hasText: PLAN_TYPE_LABEL[type] ?? type })
-      .locator('input')
-      .check()
-  }
   await page.locator('.modal').getByRole('button', { name: '만들기' }).click()
   await page.waitForTimeout(250)
 }
@@ -150,7 +138,7 @@ const run = async () => {
     await boot(page)
     // The only plan is the rolling default pack (early sample plan is gone).
     const planLabel = await page.locator('.plan-current').innerText()
-    if (!planLabel.includes('365 스톡 키워드') || !planLabel.includes('365일'))
+    if (!planLabel.includes('365 스톡 키워드'))
       throw new Error('plan label: ' + JSON.stringify(planLabel))
     for (const bad of ['떡국', '일출', '복주머니', '겨울여행']) {
       if (await page.getByRole('button', { name: bad, exact: true }).count())

@@ -6,18 +6,8 @@ import { Modal } from './Modal'
 import { PromptDialog } from './PromptDialog'
 import { ConfirmDialog } from './ConfirmDialog'
 
-const TYPE_LABEL: Record<PlanType, string> = {
-  '365': '365일',
-  weekly: '주간',
-  monthly: '월간',
-  custom: '내 계획',
-}
-
-// V1은 날짜 계획만 제공한다. 주간/월간은 보류(타입 정의·순수 함수는 유지).
-const TYPE_OPTIONS: { type: PlanType; label: string; hint: string }[] = [
-  { type: '365', label: '365일 (날짜)', hint: 'YYYY-MM-DD · 달력 보기 지원' },
-  { type: 'custom', label: '내 계획 (날짜)', hint: '자유 날짜 계획 · 달력 보기 지원' },
-]
+// V1은 계획 유형 선택이 없다. 모든 계획은 날짜(365) 기반.
+// PlanType('weekly'|'monthly'|'custom')·순수 함수는 재추가 대비 그대로 둔다.
 
 export function PlanBar({
   plans,
@@ -45,17 +35,12 @@ export function PlanBar({
           >
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} · {TYPE_LABEL[p.type]}
+                {p.name}
               </option>
             ))}
           </select>
         ) : (
-          activePlan && (
-            <span className="plan-current">
-              {activePlan.name}
-              <span className="plan-type-badge">{TYPE_LABEL[activePlan.type]}</span>
-            </span>
-          )
+          activePlan && <span className="plan-current">{activePlan.name}</span>
         )}
 
         <button className="btn btn-sm" onClick={() => setCreating(true)}>
@@ -134,12 +119,12 @@ function NewPlanDialog({
   onConfirm,
 }: {
   onCancel: () => void
+  // V1은 유형 선택 없이 항상 날짜(365) 계획을 만든다.
   onConfirm: (name: string, type: PlanType) => void
 }) {
   const [name, setName] = useState('')
-  const [type, setType] = useState<PlanType>('365')
   const submit = () => {
-    if (name.trim()) onConfirm(name.trim(), type)
+    if (name.trim()) onConfirm(name.trim(), '365')
   }
   return (
     <Modal
@@ -170,23 +155,7 @@ function NewPlanDialog({
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
       />
-      <label className="field-label">유형</label>
-      <div className="type-options">
-        {TYPE_OPTIONS.map((o) => (
-          <label key={o.type} className="type-option">
-            <input
-              type="radio"
-              name="plan-type"
-              checked={type === o.type}
-              onChange={() => setType(o.type)}
-            />
-            <span>
-              <b>{o.label}</b>
-              <span className="hint"> — {o.hint}</span>
-            </span>
-          </label>
-        ))}
-      </div>
+      <p className="hint">날짜(YYYY-MM-DD) 기반 계획으로 만들어집니다.</p>
     </Modal>
   )
 }

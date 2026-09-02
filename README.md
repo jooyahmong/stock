@@ -154,13 +154,12 @@ V1은 ① 로컬 + My GPT 링크만. (회원가입·비밀번호·OAuth·이메�
 
 ## 계획 선택 · 브랜드 · 푸터
 
-- **계획 유형 탭 제거**: 상단의 `365 Days / Weekly / Monthly / My Plan` 탭을 없앴다.
-  대부분 계획이 하나뿐이라 빈 탭이 부담이었다. 대신 계획 `<select>`(2개 이상일 때)
-  + `+ 새 계획`. 유형은 **생성 시 라디오로 선택**하고 이름 옆 배지로 표시.
-- **V1은 날짜 계획만**: 새 계획 유형은 `365일(날짜)` / `내 계획(날짜)` 둘뿐.
-  `weekly` / `monthly` 는 보류 — `PlanType` 타입·`periodKind`·`normalizePeriod`
-  등 순수 함수와 그 단위 테스트는 남겨 두어(재추가 = `PlanBar` `TYPE_OPTIONS`에
-  2줄), 다만 UI에서 만들 수 없다. 기존 weekly/monthly 데이터는 그대로 렌더된다.
+- **계획 유형 UI 없음**: 상단 탭도, 새 계획의 유형 라디오도, 이름 옆 배지도 없다.
+  모든 계획은 **날짜(`365`) 기반**으로 생성된다(`NewPlanDialog` → `onConfirm(name,
+  '365')`). 계획이 2개 이상이면 `<select>`(이름만), 하나면 이름만 표시.
+- **재추가 대비**: `PlanType`(`weekly`/`monthly`/`custom`)·`periodKind`·
+  `normalizePeriod`·`buildTemplateWorkbook(kind)` 등 순수 함수와 그 단위 테스트는
+  그대로 둔다. 기존에 만든 다른 유형 계획 데이터가 있으면 계속 렌더된다.
 - **브랜드**: `public/logo.png`(헤더 워드마크), `public/favicon.ico`. 색상은 로고에서
   추출 — 바이올렛 `#6b4df5`(기본), 코랄 `#f4695a`(오늘·강조), 상단 그라데이션 스트립,
   진행바 그라데이션, 체크박스 `accent-color`. 과한 장식은 피함(생산성 도구).
