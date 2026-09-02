@@ -244,7 +244,9 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <img className="app-logo" src="/logo.png" alt="WOOJOO Stock Planner" />
-        <span className="app-sub">내가 계획하고 실천하는 365일 스톡 진행 플래너</span>
+        <span className="app-sub">
+          오늘도 생각만 하고 실천하지 못한 나를 위한 365일 스톡 진행 플래너
+        </span>
       </header>
 
       <PlanBar plans={plans ?? []} activePlan={activePlan} />
