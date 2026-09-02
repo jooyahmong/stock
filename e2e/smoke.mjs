@@ -736,7 +736,7 @@ const run = async () => {
       throw new Error('done line must not also show ×')
   })
 
-  await test('Calendar: 오늘·미래 키워드는 O/X 표시 안 함', async (page) => {
+  await test('Calendar: 오늘/미래는 미체크면 O/X 없음, 체크하면 즉시 ○', async (page) => {
     await boot(page)
     await newPlan(page, 'Cal Test 2')
     const now = new Date()
@@ -749,14 +749,28 @@ const run = async () => {
     const todayLine = page.locator('.cal-kw', { hasText: 'today kw' })
     await todayLine.waitFor()
     if ((await todayLine.locator('.cal-mark').count()) !== 0)
-      throw new Error('today keyword must have no O/X')
+      throw new Error('unchecked today keyword must have no O/X')
     await page.locator('.cal-cell-today').waitFor() // today is highlighted
 
     await page.getByRole('button', { name: '다음 달' }).click()
     const futureLine = page.locator('.cal-kw', { hasText: 'future kw' })
     await futureLine.waitFor()
     if ((await futureLine.locator('.cal-mark').count()) !== 0)
-      throw new Error('future keyword must have no O/X')
+      throw new Error('unchecked future keyword must have no O/X')
+
+    // 목록으로 돌아가 오늘 키워드 "생성" 체크 → 달력에 즉시 ○
+    await page.getByRole('tab', { name: '목록 보기' }).click()
+    await page
+      .locator('.kw-row', { hasText: 'today kw' })
+      .locator('.status-check', { hasText: '생성' })
+      .locator('input')
+      .check()
+    await page.waitForTimeout(200)
+    await page.getByRole('tab', { name: '달력 보기' }).click()
+    const todayLine2 = page.locator('.cal-kw', { hasText: 'today kw' })
+    await todayLine2.waitFor()
+    if ((await todayLine2.locator('.cal-mark-done').count()) !== 1)
+      throw new Error('checked today keyword should show ○ immediately')
   })
 
   await test('Calendar: 긴 키워드는 한 줄 ellipsis, 전체는 title', async (page) => {

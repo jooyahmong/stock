@@ -96,19 +96,17 @@ describe('keywordsByDay', () => {
 
 describe('genMark (O/X rule)', () => {
   const today = '2027-09-10'
-  it('past + generated -> done (○)', () => {
-    expect(genMark('2027-09-09', today, true)).toBe('done')
+  it('generated -> done (○) immediately, any date', () => {
+    expect(genMark('2027-09-09', today, true)).toBe('done') // past
+    expect(genMark(today, today, true)).toBe('done') // today
+    expect(genMark('2027-12-31', today, true)).toBe('done') // future
   })
-  it('past + not generated -> missing (×)', () => {
+  it('not generated + past -> missing (×)', () => {
     expect(genMark('2027-09-09', today, false)).toBe('missing')
   })
-  it('today -> none regardless of generated', () => {
+  it('not generated + today/future -> none (not a miss yet)', () => {
     expect(genMark(today, today, false)).toBe('none')
-    expect(genMark(today, today, true)).toBe('none')
-  })
-  it('future -> none regardless of generated', () => {
     expect(genMark('2027-09-11', today, false)).toBe('none')
-    expect(genMark('2027-12-31', today, true)).toBe('none')
   })
 })
 

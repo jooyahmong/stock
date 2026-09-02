@@ -103,14 +103,16 @@ export function earliestDateMonth(keywords: KeywordItem[]): string | null {
 export type GenMark = 'done' | 'missing' | 'none'
 
 /**
- * O/X rule (spec §4): only past dates get a mark.
- *   past + 생성 true  -> 'done'    (○)
- *   past + 생성 false -> 'missing' (×)
- *   today or future   -> 'none'    (the day isn't over — don't mark misses)
+ * O/X rule:
+ *   생성 true         -> 'done'    (○)  — shown immediately, any date
+ *   생성 false + past  -> 'missing' (×)  — a day that ended without 생성
+ *   생성 false + today/future -> 'none'  — the day isn't over, not a miss yet
+ *
+ * Checking 생성 marks ○ right away; × only appears once the date has passed.
  */
 export function genMark(dayIso: string, today: string, generated: boolean): GenMark {
-  if (dayIso >= today) return 'none'
-  return generated ? 'done' : 'missing'
+  if (generated) return 'done'
+  return dayIso < today ? 'missing' : 'none'
 }
 
 export function isValidMonth(month: string): boolean {

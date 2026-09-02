@@ -195,8 +195,9 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
   절대 합치지 않는다. 하루 최대 3개 표시, 초과 시 `+N개` → 상세 모달(전체 목록,
   각 키워드 클릭 가능).
 - **O/X 규칙** (`domain/calendar.ts` `genMark`): 판단 컬럼은 **"생성" 하나뿐**.
-  과거 + 생성 O → `○`, 과거 + 미생성 → `×`, **오늘·미래는 표시 안 함**
-  (아직 안 끝난 날에 X를 붙이지 않는다). O/X는 날짜가 아니라 **키워드 단위**.
+  생성 체크 → **날짜와 무관하게 즉시 `○`**. 미체크 + 과거 → `×`, 미체크 +
+  오늘·미래 → 표시 안 함(아직 안 끝난 날에 X를 붙이지 않는다).
+  O/X는 날짜가 아니라 **키워드 단위**.
 - 긴 키워드는 1줄 ellipsis(`white-space:nowrap; overflow:hidden; text-overflow:ellipsis`),
   전체 문자열은 `title`(hover)과 상세 모달에서 확인.
 - 키워드 클릭은 목록 보기와 **완전히 동일한 `onRun` 핸들러**를 재사용 (Direct 기본
@@ -362,7 +363,8 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
   **URL 검증**, Generator 미설정 경고,
   Settings 생성 탭, Direct fallback 모달·My GPT 전환, Direct 성공(목킹) → 이미지 +
   "생성" 자동 체크 + 영속, Direct 실패 → 체크 안 함, 모바일 가로 오버플로 없음,
-  **Calendar**: 7열 grid + 과거 ○/×, 오늘·미래 마크 없음, 긴 키워드 ellipsis+title,
+  **Calendar**: 7열 grid + 과거 ○/×, 오늘/미래는 미체크 시 마크 없음·체크 시 즉시 ○,
+  긴 키워드 ellipsis+title,
   하루 4개↑ → +N개 → 상세 모달, 캘린더 키워드 클릭 → 동일 generation handler,
   이전/다음 달 + [오늘], 모바일 agenda.
 

@@ -3,7 +3,7 @@ import type { GenMark } from '../../domain/calendar'
 /**
  * One keyword inside a calendar cell / day list.
  * - single line, ellipsis for overflow (full text kept in `title`)
- * - O/X shown only for past dates (mark === 'done' | 'missing')
+ * - ○ as soon as 생성 is checked (any date); × only for past days left unchecked
  * - click reuses the caller's generation handler — no logic duplicated here
  */
 export function CalendarKeywordLine({
