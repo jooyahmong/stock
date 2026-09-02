@@ -10,13 +10,22 @@ import { apiErrorMessage, browserBlockedMessage } from './http'
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-/** gemini-* first — those work on the free tier; imagen-* needs billing. */
+/**
+ * Suggested model IDs, gemini-* first — those run on the FREE Gemini API tier.
+ * `imagen-*` needs a billing-enabled Google Cloud project.
+ *
+ * Google renames these previews often; the real source of truth is the live
+ * `ListModels` call, which `testConnection()` surfaces to the user.
+ */
 export const GOOGLE_MODELS = [
+  'gemini-2.5-flash-image',
   'gemini-2.5-flash-image-preview',
   'gemini-2.0-flash-preview-image-generation',
-  'imagen-3.0-generate-002',
   'imagen-4.0-generate-001',
+  'imagen-3.0-generate-002',
 ]
+
+const DEFAULT_MODEL = 'gemini-2.5-flash-image'
 
 /**
  * Google — Gemini API image generation.
@@ -38,9 +47,7 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     this.id = record.id
     this.name = record.name
     this.apiKey = record.apiKey.trim()
-    // Default to a model that also works on the FREE Gemini API tier.
-    // Imagen (`imagen-*`) needs a billing-enabled project.
-    this.model = record.model.trim() || 'gemini-2.5-flash-image-preview'
+    this.model = record.model.trim() || DEFAULT_MODEL
   }
 
   async testConnection(signal?: AbortSignal): Promise<TestConnectionResult> {
@@ -50,10 +57,18 @@ export class GoogleImageProvider implements ImageGenerationProvider {
         `${API_BASE}/models?key=${encodeURIComponent(this.apiKey)}`,
         { signal },
       )
-      if (res.ok) return { ok: true, message: '연결 성공' }
-      if (res.status === 400 || res.status === 401 || res.status === 403)
-        return { ok: false, message: 'API Key가 올바르지 않거나 권한이 없습니다.' }
-      return { ok: false, message: `연결 실패 (HTTP ${res.status})` }
+      if (!res.ok) {
+        if (res.status === 400 || res.status === 401 || res.status === 403)
+          return { ok: false, message: 'API Key가 올바르지 않거나 권한이 없습니다.' }
+        return { ok: false, message: `연결 실패 (HTTP ${res.status})` }
+      }
+      const models = await imageModelsFromResponse(res)
+      return {
+        ok: true,
+        message: models.length
+          ? `연결 성공 — 이 키에서 쓸 수 있는 이미지 모델: ${models.join(', ')}`
+          : '연결 성공 (이 키에서 쓸 수 있는 이미지 생성 모델을 찾지 못했습니다. 결제 활성화 또는 다른 키가 필요할 수 있습니다.)',
+      }
     } catch (err) {
       return { ok: false, message: browserBlockedMessage(err) }
     }
@@ -66,11 +81,30 @@ export class GoogleImageProvider implements ImageGenerationProvider {
       : this.viaGemini(params)
   }
 
-  /** 404 on Google usually means the model isn't available to this key. */
-  private notFoundHint(): string {
-    return this.model.startsWith('imagen')
-      ? ` — Imagen 모델은 결제(빌링)가 활성화된 Google Cloud 프로젝트에서만 사용할 수 있습니다. 무료 키라면 Model을 "gemini-2.5-flash-image-preview" 등 gemini 이미지 모델로 바꾸세요.`
-      : ` — 이 API 키에서 "${this.model}" 모델을 쓸 수 없습니다. Google AI Studio에서 사용 가능한 이미지 모델 ID를 확인해 Model 값을 바꾸세요.`
+  /**
+   * 404 on Google means the model name isn't valid for this key + endpoint.
+   * Ask the API which image models the key *can* use and name them.
+   */
+  private async notFoundHint(): Promise<string> {
+    const models = await this.availableImageModels()
+    const head = this.model.startsWith('imagen')
+      ? ` — Imagen 모델은 결제(빌링)가 활성화된 Google Cloud 프로젝트에서만 쓸 수 있습니다.`
+      : ` — 이 API 키로 "${this.model}" 모델을 호출할 수 없습니다.`
+    return models.length
+      ? `${head} 이 키에서 쓸 수 있는 이미지 모델: ${models.join(', ')} — Model 값을 이 중 하나로 바꾸세요.`
+      : `${head} 설정 → 생성에서 "연결 테스트"를 눌러 사용 가능한 모델을 확인하세요. 없다면 무료 등급에서는 이미지 생성이 불가능한 키입니다.`
+  }
+
+  private async availableImageModels(): Promise<string[]> {
+    try {
+      const res = await fetch(
+        `${API_BASE}/models?key=${encodeURIComponent(this.apiKey)}`,
+      )
+      if (!res.ok) return []
+      return imageModelsFromResponse(res)
+    } catch {
+      return []
+    }
   }
 
   private aspectRatio(size?: string): string {
@@ -108,7 +142,8 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     }
     if (!res.ok)
       throw new GenerationError(
-        (await apiErrorMessage(res)) + (res.status === 404 ? this.notFoundHint() : ""),
+        (await apiErrorMessage(res)) +
+          (res.status === 404 ? await this.notFoundHint() : ''),
       )
 
     const json = (await res.json()) as {
@@ -145,7 +180,8 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     }
     if (!res.ok)
       throw new GenerationError(
-        (await apiErrorMessage(res)) + (res.status === 404 ? this.notFoundHint() : ""),
+        (await apiErrorMessage(res)) +
+          (res.status === 404 ? await this.notFoundHint() : ''),
       )
 
     const json = (await res.json()) as {
@@ -160,7 +196,8 @@ export class GoogleImageProvider implements ImageGenerationProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    return GOOGLE_MODELS
+    const live = await this.availableImageModels()
+    return live.length ? live : GOOGLE_MODELS
   }
 
   private result(dataUrl: string): GeneratedImage {
@@ -170,5 +207,24 @@ export class GoogleImageProvider implements ImageGenerationProvider {
       provider: this.name,
       createdAt: new Date().toISOString(),
     }
+  }
+}
+
+/** Pull image-capable model IDs out of a `ListModels` response (best effort). */
+async function imageModelsFromResponse(res: Response): Promise<string[]> {
+  try {
+    const json = (await res.json()) as {
+      models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>
+    }
+    return (json.models ?? [])
+      .filter((m) =>
+        m.supportedGenerationMethods?.some(
+          (x) => x === 'generateContent' || x === 'predict',
+        ),
+      )
+      .map((m) => (m.name ?? '').replace(/^models\//, ''))
+      .filter((id) => /image|imagen/i.test(id))
+  } catch {
+    return []
   }
 }

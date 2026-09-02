@@ -103,6 +103,35 @@ describe('GoogleImageProvider.generateImage', () => {
       new GoogleImageProvider(record()).generateImage({ prompt: 'x' }),
     ).rejects.toThrowError(/이미지 데이터/)
   })
+
+  it('on 404, lists the image models the key can actually use', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/models?key=')) {
+        return {
+          ok: true,
+          json: async () => ({
+            models: [
+              {
+                name: 'models/gemini-2.5-flash-image',
+                supportedGenerationMethods: ['generateContent'],
+              },
+              {
+                name: 'models/gemini-2.5-pro',
+                supportedGenerationMethods: ['generateContent'],
+              },
+            ],
+          }),
+        }
+      }
+      return { ok: false, status: 404, json: async () => ({ error: { message: 'not found' } }) }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(
+      new GoogleImageProvider(
+        record({ model: 'gemini-2.5-flash-image-preview' }),
+      ).generateImage({ prompt: 'x' }),
+    ).rejects.toThrowError(/gemini-2\.5-flash-image(?!-preview)/)
+  })
 })
 
 describe('GoogleImageProvider.testConnection', () => {
@@ -114,6 +143,28 @@ describe('GoogleImageProvider.testConnection', () => {
   it('200 → success', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })))
     expect((await new GoogleImageProvider(record()).testConnection()).ok).toBe(true)
+  })
+  it('200 → success message names the usable image models', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          models: [
+            {
+              name: 'models/gemini-2.5-flash-image',
+              supportedGenerationMethods: ['generateContent'],
+            },
+            { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] },
+          ],
+        }),
+      })),
+    )
+    const res = await new GoogleImageProvider(record()).testConnection()
+    expect(res.ok).toBe(true)
+    expect(res.message).toContain('gemini-2.5-flash-image')
+    expect(res.message).not.toContain('text-embedding')
   })
   it('requires an api key', async () => {
     expect(
