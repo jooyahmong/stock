@@ -81,6 +81,18 @@ export class GoogleImageProvider implements ImageGenerationProvider {
       : this.viaGemini(params)
   }
 
+  /** Extra guidance appended to a failed-response error, by HTTP status. */
+  private async statusHint(status: number): Promise<string> {
+    if (status === 404) return this.notFoundHint()
+    if (status === 429)
+      return (
+        ` — 무료 등급(free tier) Gemini 키는 이미지 생성 허용량이 0입니다. ` +
+        `이미지 생성을 쓰려면 Google Cloud에서 결제(빌링)를 활성화한 유료 키가 필요합니다. ` +
+        `결제 없이 쓰시려면 "My GPT" 방식을 이용하세요.`
+      )
+    return ''
+  }
+
   /**
    * 404 on Google means the model name isn't valid for this key + endpoint.
    * Ask the API which image models the key *can* use and name them.
@@ -143,7 +155,7 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     if (!res.ok)
       throw new GenerationError(
         (await apiErrorMessage(res)) +
-          (res.status === 404 ? await this.notFoundHint() : ''),
+          await this.statusHint(res.status),
       )
 
     const json = (await res.json()) as {
@@ -181,7 +193,7 @@ export class GoogleImageProvider implements ImageGenerationProvider {
     if (!res.ok)
       throw new GenerationError(
         (await apiErrorMessage(res)) +
-          (res.status === 404 ? await this.notFoundHint() : ''),
+          await this.statusHint(res.status),
       )
 
     const json = (await res.json()) as {
