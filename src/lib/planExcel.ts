@@ -1,6 +1,6 @@
-import type { Plan, PlanSnapshot } from '../repo/types'
+import type { Plan, PlanSnapshot, StatusColumn } from '../repo/types'
 import { periodKind } from '../domain/periods'
-import { buildFullExportWorkbook } from '../domain/excel'
+import { buildTemplateWorkbook, buildFullExportWorkbook } from '../domain/excel'
 import { downloadBlob } from './download'
 
 export const XLSX_MIME =
@@ -8,6 +8,16 @@ export const XLSX_MIME =
 
 function safeName(s: string) {
   return s.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'plan'
+}
+
+export function downloadTemplateFor(plan: Plan, statusColumns: StatusColumn[]): void {
+  const kind = periodKind(plan.type)
+  const cols = [...statusColumns].sort((a, b) => a.order - b.order)
+  downloadBlob(
+    buildTemplateWorkbook(kind, cols),
+    `stock-template-${kind}.xlsx`,
+    XLSX_MIME,
+  )
 }
 
 export function downloadFullExport(plan: Plan, snapshot: PlanSnapshot): void {

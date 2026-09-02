@@ -23,6 +23,11 @@ export function periodColumnLabel(kind: PeriodKind): string {
   return kind === 'week' ? 'Week' : kind === 'month' ? 'Month' : 'Date'
 }
 
+/** Korean noun for the period unit, for UI buttons/labels ("날짜 추가"). */
+export function periodNoun(kind: PeriodKind): string {
+  return kind === 'week' ? '주' : kind === 'month' ? '월' : '날짜'
+}
+
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const WEEK_RE = /^(\d{4})-W(\d{2})$/
 const MONTH_RE = /^(\d{4})-(\d{2})$/
@@ -62,12 +67,18 @@ export function normalizePeriod(kind: PeriodKind, cell: unknown): string | null 
   if (cell == null) return null
 
   if (cell instanceof Date && !isNaN(cell.getTime())) {
-    const y = cell.getFullYear()
-    const mo = String(cell.getMonth() + 1).padStart(2, '0')
-    const d = String(cell.getDate()).padStart(2, '0')
+    // SheetJS date serials can land a second either side of midnight
+    // (e.g. 2027-01-01 comes back as 2026-12-31T23:59:59). Snap to the
+    // nearest local midnight so it round-trips against the stored ISO string.
+    const snapped = new Date(cell.getTime())
+    if (snapped.getHours() >= 12) snapped.setDate(snapped.getDate() + 1)
+    snapped.setHours(0, 0, 0, 0)
+    const y = snapped.getFullYear()
+    const mo = String(snapped.getMonth() + 1).padStart(2, '0')
+    const d = String(snapped.getDate()).padStart(2, '0')
     if (kind === 'date') return `${y}-${mo}-${d}`
     if (kind === 'month') return `${y}-${mo}`
-    return isoWeekString(cell)
+    return isoWeekString(snapped)
   }
 
   let value = String(cell).trim()

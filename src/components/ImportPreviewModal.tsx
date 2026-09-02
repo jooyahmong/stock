@@ -24,7 +24,8 @@ export function ImportPreviewModal({
   const [phase, setPhase] = useState<Phase>('pick')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [fileName, setFileName] = useState('')
-  const [skipDuplicates, setSkipDuplicates] = useState(true)
+  // Mirror mode: also remove keywords that the file no longer contains.
+  const [deleteMissing, setDeleteMissing] = useState(false)
 
   const kind = periodKind(plan.type)
 
@@ -35,6 +36,7 @@ export function ImportPreviewModal({
       const result = await parseImportFile(file, {
         kind,
         existingKeywords: snapshot.keywords.map((k) => ({
+          id: k.id,
           period: k.period,
           keyword: k.keyword,
         })),
@@ -52,31 +54,50 @@ export function ImportPreviewModal({
   const runImport = async () => {
     if (!preview || !preview.ok) return
     setPhase('importing')
-    const rows = skipDuplicates
-      ? preview.rows.filter((r) => !r.isDuplicate)
-      : preview.rows
 
+    const newRows = preview.rows.filter((r) => !r.matchedKeywordId)
+    const matchedRows = preview.rows.filter((r) => r.matchedKeywordId)
+
+    // 1. Create the brand-new keywords.
     const created = await repo.createKeywords(
-      rows.map((r) => ({ planId: plan.id, period: r.period, keyword: r.keyword })),
+      newRows.map((r) => ({ planId: plan.id, period: r.period, keyword: r.keyword })),
     )
-
-    // Apply extended-column check values, grouped per status column.
-    const byColumn = new Map<string, string[]>()
+    const newByColumn = new Map<string, string[]>()
     created.forEach((kw, i) => {
-      const statuses = rows[i]?.statuses ?? {}
-      for (const [colId, checked] of Object.entries(statuses)) {
-        if (checked) {
-          const arr = byColumn.get(colId) ?? []
-          arr.push(kw.id)
-          byColumn.set(colId, arr)
-        }
+      for (const [colId, checked] of Object.entries(newRows[i]?.statuses ?? {})) {
+        if (!checked) continue
+        const arr = newByColumn.get(colId) ?? []
+        arr.push(kw.id)
+        newByColumn.set(colId, arr)
       }
     })
-    for (const [colId, ids] of byColumn) {
+    for (const [colId, ids] of newByColumn) {
       await repo.setKeywordStatusBulk(ids, colId, true)
     }
 
-    showToast(`${created.length}개 키워드를 가져왔습니다.`)
+    // 2. Update matched keywords in place — set every recognized column to the
+    //    sheet value so un-checks are applied too, not only checks.
+    for (const colId of preview.recognizedStatusColumnIds) {
+      const on: string[] = []
+      const off: string[] = []
+      for (const r of matchedRows) {
+        if (!(colId in r.statuses)) continue
+        ;(r.statuses[colId] ? on : off).push(r.matchedKeywordId as string)
+      }
+      if (on.length) await repo.setKeywordStatusBulk(on, colId, true)
+      if (off.length) await repo.setKeywordStatusBulk(off, colId, false)
+    }
+
+    // 3. Mirror mode: drop keywords the file no longer lists.
+    let deleted = 0
+    if (deleteMissing && preview.unmatchedExistingIds.length) {
+      await repo.deleteKeywords(preview.unmatchedExistingIds)
+      deleted = preview.unmatchedExistingIds.length
+    }
+
+    const parts = [`추가 ${created.length}`, `갱신 ${matchedRows.length}`]
+    if (deleted) parts.push(`삭제 ${deleted}`)
+    showToast(parts.join(' · '))
     onClose()
   }
 
@@ -94,7 +115,7 @@ export function ImportPreviewModal({
             <button
               className="btn btn-primary"
               onClick={runImport}
-              disabled={preview.rows.length === 0}
+              disabled={preview.rows.length === 0 && !deleteMissing}
             >
               가져오기
             </button>
@@ -112,6 +133,10 @@ export function ImportPreviewModal({
             기준 열은 <b>{preview?.periodHeader ?? kindLabel(kind)}</b>, 그리고{' '}
             <b>Keyword</b> 열이 필요합니다. 확장 열(생성 / 미캔 / 사용자 단계)이 있으면
             자동으로 인식합니다.
+          </p>
+          <p className="hint">
+            같은 <b>{kindLabel(kind)} + Keyword</b> 는 기존 항목으로 보고 <b>체크값을
+            그대로 덮어씁니다</b> (체크 해제도 반영). 없는 항목만 새로 추가됩니다.
           </p>
           <input
             ref={fileRef}
@@ -147,21 +172,24 @@ export function ImportPreviewModal({
           <p className="import-file">{fileName}</p>
           <ul className="import-stats">
             <li>
-              새 항목 <b>{skipDuplicates ? preview.newCount : preview.rows.length}</b>
+              새로 추가 <b>{preview.newCount}</b>
             </li>
-            <li className={preview.duplicateCount ? 'warn' : ''}>
-              중복 가능 <b>{preview.duplicateCount}</b>
-              {preview.duplicateCount > 0 && (
+            <li>
+              기존 갱신 <b>{preview.updateCount}</b>
+            </li>
+            {preview.unmatchedExistingIds.length > 0 && (
+              <li className={deleteMissing ? 'warn' : ''}>
+                파일에 없는 기존 항목 <b>{preview.unmatchedExistingIds.length}</b>
                 <label className="dup-toggle">
                   <input
                     type="checkbox"
-                    checked={skipDuplicates}
-                    onChange={(e) => setSkipDuplicates(e.target.checked)}
+                    checked={deleteMissing}
+                    onChange={(e) => setDeleteMissing(e.target.checked)}
                   />
-                  중복 제외
+                  삭제 (파일과 완전히 일치시키기)
                 </label>
-              )}
-            </li>
+              </li>
+            )}
             <li className={preview.errors.length ? 'warn' : ''}>
               오류 <b>{preview.errors.length}</b>
             </li>

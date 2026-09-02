@@ -49,9 +49,9 @@ async function newPlan(page, name, type) {
   await page.waitForTimeout(250)
 }
 
-/** Add one keyword on an exact date via the list view (+ 기간 추가 → + 키워드 추가). */
+/** Add one keyword on an exact date via the list view (+ 날짜 추가 → + 키워드 추가). */
 async function addKeywordOnDate(page, dateIso, keyword) {
-  await page.getByRole('button', { name: '+ 기간 추가' }).click()
+  await page.getByRole('button', { name: '+ 날짜 추가' }).click()
   await page.locator('.modal .field-input').fill(dateIso)
   await page.locator('.modal').getByRole('button', { name: '추가' }).click()
   const group = page
@@ -334,6 +334,64 @@ const run = async () => {
     if (ils[2] !== 'FALSE') throw new Error('SEED_B 생성 should be FALSE')
   })
 
+  await test('Template 내려받기: Date | Keyword | 생성 | 미캔 헤더 + FALSE 기본값', async (page) => {
+    await boot(page)
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Template', exact: true }).click(),
+    ])
+    const stream = await download.createReadStream()
+    const chunks = []
+    for await (const c of stream) chunks.push(c)
+    const wb = XLSX.read(Buffer.concat(chunks), { type: 'buffer' })
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })
+    if (JSON.stringify(aoa[0]) !== JSON.stringify(['Date', 'Keyword', '생성', '미캔']))
+      throw new Error('bad template header ' + JSON.stringify(aoa[0]))
+    if (aoa[1][2] !== 'FALSE' || aoa[1][3] !== 'FALSE')
+      throw new Error('template status columns should default FALSE: ' + JSON.stringify(aoa[1]))
+  })
+
+  await test('Excel import: Full Export 를 그대로 재import → 개수 불변 (더블 안 생김)', async (page) => {
+    await boot(page)
+    const expandAll = async () => {
+      const btn = page.getByRole('button', { name: /전체 \d+일 보기/ })
+      if (await btn.count()) {
+        await btn.click()
+        await page.waitForTimeout(400)
+      }
+    }
+    await expandAll()
+    const before = await page.locator('.kw-row').count()
+
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Full Export' }).click(),
+    ])
+    const cs = []
+    for await (const c of await dl.createReadStream()) cs.push(c)
+    const wb = XLSX.read(Buffer.concat(cs), { type: 'buffer' })
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })
+    const w = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet(aoa), 'S')
+    const reFile = {
+      name: 're.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: Buffer.from(XLSX.write(w, { bookType: 'xlsx', type: 'array' })),
+    }
+
+    await page.getByRole('button', { name: 'Import Excel' }).click()
+    await page.locator('input[type="file"]').setInputFiles(reFile)
+    await page.getByText('새로 추가').waitFor()
+    const stats = await page.locator('.import-stats').innerText()
+    if (!/새로 추가\s*0(\D|$)/.test(stats))
+      throw new Error('re-import should add 0 new rows, got: ' + stats)
+    await page.getByRole('button', { name: '가져오기' }).click()
+    await page.waitForTimeout(600)
+
+    await expandAll()
+    const after = await page.locator('.kw-row').count()
+    if (after !== before) throw new Error(`row count changed ${before} -> ${after}`)
+  })
 
   await test('Excel import: repeated dates, empty keyword, bad date -> preview + commit', async (page) => {
     await boot(page)
@@ -353,7 +411,7 @@ const run = async () => {
       ['2027-03-02', '입학식'],
     ])
     await page.locator('input[type="file"]').setInputFiles(file)
-    await page.getByText('새 항목').waitFor()
+    await page.getByText('새로 추가').waitFor()
     const statsText = await page.locator('.import-stats').innerText()
     if (!statsText.includes('3')) throw new Error('expected 3 new items in preview: ' + statsText)
     if (!statsText.includes('오류')) throw new Error('expected error count shown')

@@ -57,20 +57,40 @@ describe('parseImportFile — minimal Date | Keyword', () => {
     expect(preview.rows).toHaveLength(1)
   })
 
-  it('detects duplicates against existing keywords and within the file', async () => {
+  it('matches existing keywords for in-place update; extra copies become new', async () => {
     const file = sheetToFile([
       ['Date', 'Keyword'],
-      ['2027-01-01', '떡국'], // dup of existing
+      ['2027-01-01', '떡국'], // matches existing e1 -> update
       ['2027-01-02', '눈사람'], // new
-      ['2027-01-02', '눈사람'], // dup within file
+      ['2027-01-02', '눈사람'], // still new (plan has no 눈사람)
     ])
     const preview = await parseImportFile(file, {
       kind: 'date',
-      existingKeywords: [{ period: '2027-01-01', keyword: '떡국' }],
+      existingKeywords: [{ id: 'e1', period: '2027-01-01', keyword: '떡국' }],
       statusColumns: NO_STATUS,
     })
-    expect(preview.duplicateCount).toBe(2)
-    expect(preview.newCount).toBe(1)
+    expect(preview.updateCount).toBe(1)
+    expect(preview.newCount).toBe(2)
+    expect(preview.rows[0].matchedKeywordId).toBe('e1')
+    expect(preview.rows[2].matchedKeywordId).toBeUndefined()
+    expect(preview.unmatchedExistingIds).toEqual([])
+  })
+
+  it('lists existing keywords no row matched (mirror-delete candidates)', async () => {
+    const file = sheetToFile([
+      ['Date', 'Keyword'],
+      ['2027-01-01', '떡국'],
+    ])
+    const preview = await parseImportFile(file, {
+      kind: 'date',
+      existingKeywords: [
+        { id: 'e1', period: '2027-01-01', keyword: '떡국' },
+        { id: 'e2', period: '2027-01-01', keyword: '일출' },
+      ],
+      statusColumns: NO_STATUS,
+    })
+    expect(preview.updateCount).toBe(1)
+    expect(preview.unmatchedExistingIds).toEqual(['e2'])
   })
 
   it('fails clearly when the base column is missing', async () => {
@@ -106,8 +126,25 @@ describe('parseImportFile — extended columns', () => {
     })
     expect(preview.recognizedStatusHeaders).toEqual(['생성', '미캔'])
     expect(preview.unknownStatusHeaders).toEqual(['Adobe Stock'])
-    expect(preview.rows[0].statuses).toEqual({ c1: true })
+    // Both checked AND unchecked recorded, so re-import applies un-checks.
+    expect(preview.rows[0].statuses).toEqual({ c1: true, c2: false })
     expect(preview.rows[1].statuses).toEqual({ c1: true, c2: true })
+    expect(preview.recognizedStatusColumnIds).toEqual(['c1', 'c2'])
+  })
+
+  it('an existing keyword row carries its sheet check values for update', async () => {
+    const cols: Pick<StatusColumn, 'id' | 'name'>[] = [{ id: 'c1', name: '생성' }]
+    const file = sheetToFile([
+      ['Date', 'Keyword', '생성'],
+      ['2027-01-01', '떡국', 'FALSE'], // was checked before; sheet un-checks it
+    ])
+    const preview = await parseImportFile(file, {
+      kind: 'date',
+      existingKeywords: [{ id: 'e1', period: '2027-01-01', keyword: '떡국' }],
+      statusColumns: cols,
+    })
+    expect(preview.rows[0].matchedKeywordId).toBe('e1')
+    expect(preview.rows[0].statuses).toEqual({ c1: false })
   })
 })
 
@@ -135,6 +172,16 @@ describe('template + full export round-trip', () => {
       header: 1,
     })
     expect(aoa[0]).toEqual(['Week', 'Keyword'])
+  })
+
+  it('template includes status columns with FALSE defaults', () => {
+    const buf = buildTemplateWorkbook('date', [{ name: '생성' }, { name: '미캔' }])
+    const wb = XLSX.read(buf, { type: 'array' })
+    const aoa = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], {
+      header: 1,
+    })
+    expect(aoa[0]).toEqual(['Date', 'Keyword', '생성', '미캔'])
+    expect(aoa[1]).toEqual(['2027-01-01', '떡국', 'FALSE', 'FALSE'])
   })
 
   it('full export writes one row per keyword with TRUE/FALSE and no merged dates', () => {

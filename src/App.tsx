@@ -7,11 +7,12 @@ import {
   isValidPeriod,
   defaultNewPeriod,
   periodColumnLabel,
+  periodNoun,
   currentPeriod,
 } from './domain/periods'
 import { groupKeywords } from './domain/grouping'
 import { findGeneratedColumn } from './domain/statusColumns'
-import { downloadFullExport } from './lib/planExcel'
+import { downloadTemplateFor, downloadFullExport } from './lib/planExcel'
 import { openGptWindow } from './lib/clipboard'
 import { isAllowedGptUrl } from './lib/gptUrl'
 import { readViewMode, writeViewMode, type ViewMode } from './lib/viewModePref'
@@ -284,6 +285,10 @@ export default function App() {
                 onOpenImport={() => setShowImport(true)}
                 onOpenSettings={() => setShowSettings(true)}
                 onAddPeriod={() => setAddingPeriod(true)}
+                periodNoun={periodNoun(kind)}
+                onDownloadTemplate={() =>
+                  downloadTemplateFor(activePlan, snapshot.statusColumns)
+                }
                 onFullExport={() => {
                   downloadFullExport(activePlan, snapshot)
                   useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
@@ -381,6 +386,9 @@ export default function App() {
             setShowSettings(false)
             setShowImport(true)
           }}
+          onDownloadTemplate={() =>
+            downloadTemplateFor(activePlan, snapshot.statusColumns)
+          }
           onFullExport={() => {
             downloadFullExport(activePlan, snapshot)
             useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
@@ -390,7 +398,7 @@ export default function App() {
 
       {addingPeriod && activePlan && (
         <PromptDialog
-          title="기간 추가"
+          title={`${periodNoun(kind)} 추가`}
           label={periodColumnLabel(kind)}
           initialValue={defaultNewPeriod(
             kind,
@@ -407,8 +415,8 @@ export default function App() {
 
       {editingPeriod && (
         <PromptDialog
-          title="기간 수정"
-          label={`${periodColumnLabel(kind)} — 이 기간의 모든 키워드가 이동합니다`}
+          title={`${periodNoun(kind)} 수정`}
+          label={`${periodColumnLabel(kind)} — 이 ${periodNoun(kind)}의 모든 키워드가 이동합니다`}
           initialValue={editingPeriod}
           confirmLabel="변경"
           onCancel={() => setEditingPeriod(null)}

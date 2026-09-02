@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Plan, PlanSnapshot } from '../../repo/types'
 import { Modal } from '../Modal'
+import { periodKind, periodColumnLabel } from '../../domain/periods'
 import { GeneratorsSettings } from './GeneratorsSettings'
 import { StatusColumnsSettings } from './StatusColumnsSettings'
 import {
@@ -17,12 +18,14 @@ export function SettingsModal({
   snapshot,
   onClose,
   onOpenImport,
+  onDownloadTemplate,
   onFullExport,
 }: {
   plan: Plan
   snapshot: PlanSnapshot
   onClose: () => void
   onOpenImport: () => void
+  onDownloadTemplate: () => void
   onFullExport: () => void
 }) {
   const [tab, setTab] = useState<Tab>('generator')
@@ -108,10 +111,15 @@ export function SettingsModal({
                 <button className="btn" onClick={onOpenImport}>
                   Excel 가져오기 (복원)
                 </button>
+                <button className="btn" onClick={onDownloadTemplate}>
+                  템플릿 내려받기
+                </button>
               </div>
               <p className="hint">
-                백업 파일에는 Date · Keyword · 생성 · 미캔 · 사용자 정의 체크 항목이
-                포함됩니다. 같은 날짜는 병합 없이 각 행에 반복됩니다.
+                파일 열은 <b>{periodColumnLabel(periodKind(plan.type))} · Keyword ·
+                생성 · 미캔 · 사용자 정의 체크 항목</b>입니다(템플릿·백업 동일 구조).
+                같은 날짜는 병합 없이 각 행에 반복됩니다. 가져오기 시 같은
+                날짜+Keyword는 기존 항목의 체크값을 그대로 덮어씁니다.
               </p>
             </section>
 

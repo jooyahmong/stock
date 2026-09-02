@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   periodKind,
   periodColumnLabel,
+  periodNoun,
   isValidPeriod,
   normalizePeriod,
   periodGroupLabel,
@@ -19,6 +20,11 @@ describe('periodKind / label', () => {
     expect(periodColumnLabel('date')).toBe('Date')
     expect(periodColumnLabel('week')).toBe('Week')
     expect(periodColumnLabel('month')).toBe('Month')
+  })
+  it('gives a Korean noun for UI buttons', () => {
+    expect(periodNoun('date')).toBe('날짜')
+    expect(periodNoun('week')).toBe('주')
+    expect(periodNoun('month')).toBe('월')
   })
 })
 
@@ -51,6 +57,19 @@ describe('normalizePeriod', () => {
     const d = new Date(2027, 0, 5) // 5 Jan 2027 local
     expect(normalizePeriod('date', d)).toBe('2027-01-05')
     expect(normalizePeriod('month', d)).toBe('2027-01')
+  })
+  it('snaps SheetJS date drift to the nearest midnight', () => {
+    // SheetJS can return 2027-01-04T23:59:59 for a 2027-01-05 cell.
+    expect(normalizePeriod('date', new Date(2027, 0, 4, 23, 59, 59))).toBe(
+      '2027-01-05',
+    )
+    expect(normalizePeriod('date', new Date(2027, 0, 5, 0, 0, 1))).toBe(
+      '2027-01-05',
+    )
+    // Month rollover at the drift boundary.
+    expect(normalizePeriod('date', new Date(2026, 11, 31, 23, 59, 59))).toBe(
+      '2027-01-01',
+    )
   })
   it('normalizes week forms', () => {
     expect(normalizePeriod('week', '2027-W1')).toBe('2027-W01')

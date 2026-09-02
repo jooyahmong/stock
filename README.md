@@ -241,16 +241,22 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 
 ## Excel
 
-- **Template**: V1 UI에서 제외. `buildTemplateWorkbook`(`domain/excel.ts`) 함수와
-  테스트는 남겨 두어 재노출은 버튼 한 줄이면 됨. 지금은 **Full Export** 파일이
-  같은 열 구조(채워진 상태)라 그걸 편집해 Import 하면 됨.
-- **Import**: 첫 시트만. 기준 열 + `Keyword` 열 필요. 확장 열(생성/미캔/사용자 단계)은
-  기존 작업단계 이름과 대소문자 무시 매칭되면 자동 인식. 미리보기에서
-  `새 항목 / 중복 가능 / 오류 / 무시된 빈 행` 카운트 표시 후 [가져오기].
-  - 빈 키워드/빈 행: 조용히 무시.
-  - 잘못된 날짜/주/월: 오류로 분류(중단 아님), 나머지는 정상 처리.
-  - 중복(기존 또는 파일 내): 기본 "중복 제외" 체크(해제 가능).
-  - Date는 SheetJS `cellDates`로 Date 객체도 처리, `.`·`/` 구분자, 한 자리 월/일 허용.
+- **Template**: `<Date|Week|Month> | Keyword | <작업단계 열…>` — **Full Export와
+  동일한 열 구조**. 작업단계 열은 `FALSE` 기본값 + 예시 행 3개. 일간·주간·월간
+  각 유형에 맞는 헤더로 내려받는다.
+- **Import (Upsert)**: 첫 시트만. 기준 열 + `Keyword` 열 필요. 확장 열(생성/미캔/
+  사용자 단계)은 기존 작업단계 이름과 대소문자 무시 매칭되면 자동 인식.
+  - **같은 `기준값 + Keyword` = 기존 항목**으로 보고 그 행의 체크값을 시트대로
+    덮어쓴다 — **체크 해제도 반영**(TRUE→FALSE). 새 조합만 새로 생성 →
+    편집한 Full Export를 다시 넣어도 **중복이 생기지 않는다**.
+  - 매칭은 `(기준값, Keyword)` 그룹별 1:1 소비. 시트에 같은 조합이 더 많으면
+    초과분은 새 항목.
+  - 미리보기: `새로 추가 / 기존 갱신 / (파일에 없는 기존 항목) / 오류 / 빈 행 무시`.
+  - **"파일과 완전히 일치시키기"** 체크(기본 꺼짐): 파일에 없는 기존 키워드를
+    삭제해 시트와 미러링. 전체 Export를 편집했을 때만 켜라.
+  - 빈 키워드/빈 행: 조용히 무시. 잘못된 날짜/주/월: 오류로 분류(중단 아님).
+  - Date는 SheetJS `cellDates`로 Date 객체도 처리(±1초 드리프트는 가까운
+    자정으로 스냅), `.`·`/` 구분자, 한 자리 월/일 허용.
 - **Full Export**: `Date|Week|Month`, `Keyword`, 그리고 **모든 작업단계 열(숨김 포함)**.
   값은 `TRUE`/`FALSE`. 같은 날짜는 모든 행에 반복 기록(병합 없음).
   이 파일을 그대로 다시 Import하면 작업상태까지 복원된다(라운드트립 테스트 통과).
@@ -332,7 +338,8 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
 
 ## 테스트 결과
 
-- **단위 (vitest) — 85/85 통과**: `periods`, `excel`(+백업에 credential 없음 검증),
+- **단위 (vitest) — 100/100 통과**: `periods`(+Date 드리프트 스냅, `periodNoun`),
+  `excel`(import upsert 매칭·언체크 반영·mirror 후보, template 작업단계 열, 백업에 credential 없음 검증),
   `grouping`, `calendar`
   (월 grid·요일 offset·윤년 2월·genMark O/X 규칙), `statusColumns`, `gptUrl`,
   `generationConfig`, `directGenerationService`, `openaiImageProvider`,
@@ -340,12 +347,14 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
   없음·완전 동일 중복 0·결정론·(월,일) 루프·Valentine 12-01/12-14·Christmas ~10월·
   Halloween ~8월·New Year ~11월·이벤트 당일 배치 안 함·이동형 이벤트 실제 날짜·
   단어 위주 2~7어절·서술형 없음·한정어 <40%·브랜드명 제외·윤년 창도 365/730).
-- **E2E (Playwright, headless Chromium) — 33/33 통과**: 기본 365팩 렌더(창 windowed
-  → 전체 보기 시 365그룹/730행/한국어), **목록 날짜 창**, 작업체크 IndexedDB 영속,
-  선택체크 ↔ 작업체크 독립, **날짜 그룹에 선택 체크박스 없음**, **전체 선택(보이는
-  키워드만) + SelectionBar**, 키워드 추가, 체크 항목 추가, **저장 · 백업 탭(Local
-  안내·Excel 백업, 동기화 옵션 없음)**, 검색, 상태 필터, Full Export 내용 검증(같은
-  날짜 2행), Excel Import, My GPT 클릭마다 새 탭 + 복사·**GPT 열기 버튼**·
+- **E2E (Playwright, headless Chromium) — 35/35 통과 (Direct Generate off 시 7 skip)**:
+  기본 365팩 렌더(창 windowed → 전체 보기 시 365그룹/730행/한국어), **목록 날짜 창**,
+  작업체크 IndexedDB 영속, 선택체크 ↔ 작업체크 독립, **날짜 그룹에 선택 체크박스 없음**,
+  **전체 선택(보이는 키워드만) + SelectionBar**, 키워드 추가, 체크 항목 추가,
+  **저장 · 백업 탭(Local 안내·Excel 백업, 동기화 옵션 없음)**, 검색, 상태 필터,
+  Full Export 내용 검증(같은 날짜 2행), **Template 헤더(작업단계 열 + FALSE)**,
+  **Full Export 재import → 개수 불변(더블 없음)**, Excel Import 미리보기/커밋,
+  My GPT 클릭마다 새 탭 + 복사·**GPT 열기 버튼**·
   **URL 검증**, Generator 미설정 경고,
   Settings 생성 탭, Direct fallback 모달·My GPT 전환, Direct 성공(목킹) → 이미지 +
   "생성" 자동 체크 + 영속, Direct 실패 → 체크 안 함, 모바일 가로 오버플로 없음,
@@ -366,7 +375,8 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
 - 번들 712KB(gzip 237KB) — 대부분 `xlsx`. Import/Export 시 `import()`로 지연 로딩하면
   초기 로드를 크게 줄일 수 있다(Phase 2).
 - 작업단계 순서 변경은 ↑/↓ 버튼(드래그 핸들은 시각 표시만). 드래그 정렬은 후속.
-- 빈 기간("+ 기간 추가"로 만든 키워드 0개 그룹)은 `AppSetting`에 저장된다.
+- 빈 기간("+ 날짜/주/월 추가"로 만든 키워드 0개 그룹)은 `AppSetting`에 저장된다.
+  버튼 라벨은 계획 유형에 따라 `날짜`/`주`/`월`(`periodNoun`).
 - 목록 보기는 기본적으로 오늘 주변 2주만 렌더(위 "목록 보기 날짜 창"). `전체 보기`로
   365그룹/730행을 한 번에 그리면 초기 렌더가 수백 ms 걸린다 — 대규모 플랜은 달력
   보기·검색·날짜 창으로 탐색 권장. 가상 스크롤은 후속.
