@@ -14,10 +14,9 @@ const repository = new DexieRepository()
 
 void runSeedOnce(repository)
 
-if (import.meta.env.DEV) {
-  // Dev helper for manual testing (see test scenarios in README).
-  ;(window as unknown as Record<string, unknown>).__wipeAllData = __wipeAllData
-}
+// Escape hatch the 데이터 처리 안내 modal points users to — available in
+// production too, not just dev, so that instruction is actually true.
+;(window as unknown as Record<string, unknown>).__wipeAllData = __wipeAllData
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

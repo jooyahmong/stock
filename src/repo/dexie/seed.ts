@@ -59,7 +59,7 @@ export async function runSeedOnce(repo: Repository): Promise<void> {
   await repo.setSetting(SEED_MARKER_KEY, SEED_VERSION)
 }
 
-/** 수동 개발 헬퍼 — 전체 테이블 삭제 후 리로드 (main.tsx 참조). */
+/** 전체 로컬 데이터 삭제 후 리로드. 데이터 처리 안내 모달이 안내하는 콘솔 명령. */
 export async function __wipeAllData(): Promise<void> {
   await devClearAll()
   location.reload()

@@ -460,8 +460,8 @@ function DataNoticeModal({ onClose }: { onClose: () => void }) {
           )}
         </li>
         <li>
-          데이터를 지우려면 브라우저의 사이트 데이터 삭제, 또는 개발자 콘솔에서{' '}
-          <code>__wipeAllData()</code> 를 실행하세요.
+          모든 데이터를 지우려면 브라우저의 사이트 데이터 삭제, 또는 개발자
+          콘솔에서 <code>__wipeAllData()</code> 를 실행하세요(즉시 삭제 후 새로고침).
         </li>
         <li>
           향후 로그인·클라우드 저장, 광고(Google AdSense 등) 등 제3자 서비스가
