@@ -730,10 +730,16 @@ input[type='radio'] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  padding: 18px 22px;
+  padding: 18px 22px 9px;
   flex: none;
   border-bottom: 1px solid var(--border);
   background: var(--bg-soft);
+}
+.modal-backdrop-contained .generator-steps + .settings-panel {
+  padding-top: 11px;
+}
+.generator-step-panel > .gs-block > .hint:first-child {
+  margin-top: 0.5em;
 }
 .generator-step {
   display: flex;
@@ -799,7 +805,8 @@ input[type='radio'] {
   .modal-backdrop-contained .modal-head,
   .modal-backdrop-contained .settings-tabs { padding: 12px 14px; }
   .modal-backdrop-contained .settings-panel { padding: 16px 14px; }
-  .generator-steps { padding: 12px 14px; gap: 8px; }
+  .generator-steps { padding: 12px 14px 6px; gap: 8px; }
+  .modal-backdrop-contained .generator-steps + .settings-panel { padding-top: 8px; }
   .generator-step { padding: 10px 8px; gap: 8px; }
   .generator-step-number { width: 26px; height: 30px; font-size: 15px; }
   .generator-step strong { font-size: 14px; }
@@ -905,9 +912,13 @@ input[type='radio'] {
 }
 .gen-fields {
   flex: 1 1 220px;
-  display: flex;
-  flex-direction: column;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: 6px;
+}
+.gen-fields > * {
+  min-width: 0;
 }
 .gen-row-actions {
   display: flex;
@@ -920,7 +931,32 @@ input[type='radio'] {
 }
 .gen-add-title {
   font-weight: 600;
-  margin-bottom: 4px;
+  flex: none;
+}
+.gen-add-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.gen-add-header .hint {
+  margin: 0;
+  min-width: 0;
+}
+.gen-add-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+.gen-add-fields .field-label {
+  margin: 0;
+}
+.gen-add-fields .field-input {
+  min-width: 0;
+}
+.gen-add > .btn {
+  margin-top: 15px;
 }
 .excel-settings {
   display: flex;

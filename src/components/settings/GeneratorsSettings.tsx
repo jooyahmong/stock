@@ -49,24 +49,28 @@ export function GeneratorsSettings() {
       </ul>
 
       <div className="gen-add">
-        <div className="gen-add-title">생성 사이트 추가</div>
-        <p className="hint">ChatGPT·Gemini·Midjourney 등 원하는 사이트의 HTTPS 주소를 등록하세요.</p>
-        <label className="field-label" htmlFor="generator-name">사이트 이름</label>
-        <input
-          id="generator-name"
-          className="field-input"
-          value={name}
-          placeholder="예: Gemini, Midjourney, 내 이미지 GPT"
-          onChange={(e) => setName(e.target.value)}
-        />
-        <label className="field-label" htmlFor="generator-url">사이트 주소</label>
-        <input
-          id="generator-url"
-          className="field-input"
-          value={url}
-          placeholder="https://gemini.google.com/app"
-          onChange={(e) => setUrl(e.target.value)}
-        />
+        <div className="gen-add-header">
+          <div className="gen-add-title">생성 사이트 추가</div>
+          <p className="hint">ChatGPT·Gemini·Midjourney 등 원하는 사이트의 HTTPS 주소를 등록하세요.</p>
+        </div>
+        <div className="gen-add-fields">
+          <label className="field-label" htmlFor="generator-name">사이트 이름</label>
+          <input
+            id="generator-name"
+            className="field-input"
+            value={name}
+            placeholder="예: Gemini, Midjourney, 내 이미지 GPT"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <label className="field-label" htmlFor="generator-url">사이트 주소</label>
+          <input
+            id="generator-url"
+            className="field-input"
+            value={url}
+            placeholder="https://gemini.google.com/app"
+            onChange={(e) => setUrl(e.target.value)}
+          />
+        </div>
         {!urlValid && <p className="hint hint-error">{GPT_URL_HINT}</p>}
         <button
           className="btn btn-primary btn-sm"
