@@ -1269,19 +1269,6 @@ input[type='radio'] {
   min-height: 100px;
   line-height: 1.6;
 }
-.style-preview {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  font-size: 13px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-.style-preview p {
-  margin: 6px 0 0;
-}
 .image-styles {
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;

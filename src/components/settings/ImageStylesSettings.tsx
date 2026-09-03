@@ -4,7 +4,6 @@ import { useRepository } from '../../repo/RepositoryContext'
 import { useUiStore } from '../../store/uiStore'
 import { IMAGE_STYLES_KEY } from '../../lib/settingsKeys'
 import { removeImageStyle, type ImageStyle, type ImageStyleSettings } from '../../domain/imageStyles'
-import { buildGeneratorText } from '../../domain/prompt'
 
 export function ImageStylesSettings() {
   const repo = useRepository()
@@ -72,7 +71,6 @@ function StyleEditor({ style, onSave, onDelete, onCancel }: {
 }) {
   const [name, setName] = useState(style?.name ?? '')
   const [prompt, setPrompt] = useState(style?.prompt ?? '')
-  const [example, setExample] = useState('배낭 여행자 전광판')
   const dirty = name !== (style?.name ?? '') || prompt !== (style?.prompt ?? '')
   return (
     <div className="style-editor">
@@ -84,12 +82,6 @@ function StyleEditor({ style, onSave, onDelete, onCancel }: {
         placeholder="예: 2D 플랫 일러스트 스타일의 그림을 그려줘. 흰 배경으로 실제 이미지를 생성해줘."
         onChange={(e) => setPrompt(e.target.value)} />
       <p className="hint">주제 키워드는 앞에 자동으로 붙습니다. 수정한 내용은 ‘스타일 저장’을 눌러 적용하세요.</p>
-      <label className="field-label" htmlFor="image-style-example">미리보기용 키워드</label>
-      <input id="image-style-example" className="field-input" value={example} onChange={(e) => setExample(e.target.value)} />
-      <div className="style-preview" aria-label="복사될 프롬프트 미리보기">
-        <b>{dirty ? '저장 후 복사될 프롬프트' : '복사될 프롬프트'}</b>
-        <p>{buildGeneratorText(example, prompt) || '미리보기용 키워드를 입력하세요.'}</p>
-      </div>
       <div className="gs-actions">
         <button className="btn btn-primary btn-sm" disabled={!name.trim() || !prompt.trim() || !dirty}
           onClick={() => void onSave(name.trim(), prompt.trim())}>{style ? '스타일 저장' : '스타일 추가하고 선택'}</button>
