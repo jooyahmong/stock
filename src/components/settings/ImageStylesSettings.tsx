@@ -31,7 +31,6 @@ export function ImageStylesSettings() {
 
   return (
     <section className="gs-block image-styles" aria-label="그림 스타일 설정">
-      <h4>그림 스타일</h4>
       <p className="hint">
         키워드 뒤에 선택한 스타일의 지시문을 붙여 복사합니다. 열린 생성 사이트에
         붙여넣고 전송하세요. 스타일 이름과 지시문을 자유롭게 수정할 수 있습니다.

@@ -111,7 +111,6 @@ export function SettingsModal({
                 <div className="generator-step-panel" role="tabpanel" id="generator-panel-site"
                   aria-labelledby="generator-step-site" hidden={step !== 'site'} tabIndex={0}>
                   <section className="gs-block">
-                    <h4>내 생성 사이트</h4>
                     <p className="hint">
                       키워드를 누르면 선택한 스타일 지시문을 복사하고 기본 사이트를 엽니다.
                       열린 사이트에 붙여넣고 전송하세요.
