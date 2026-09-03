@@ -3,6 +3,7 @@ import type { Plan, PlanSnapshot } from '../../repo/types'
 import { Modal } from '../Modal'
 import { periodKind, periodColumnLabel } from '../../domain/periods'
 import { GeneratorsSettings } from './GeneratorsSettings'
+import { ImageStylesSettings } from './ImageStylesSettings'
 import { StatusColumnsSettings } from './StatusColumnsSettings'
 import {
   directGenerationEnabled,
@@ -64,15 +65,18 @@ export function SettingsModal({
             {directGenerationEnabled && mode === 'direct' && <DirectGenerateSettings />}
 
             {mode === 'my-gpt' && (
+              <>
+              <ImageStylesSettings />
               <section className="gs-block">
                 <h4>내 생성 사이트</h4>
                 <p className="hint">
                   ChatGPT·Gemini·Midjourney 등 사용하는 사이트를 등록하세요. 키워드를
                   클릭하면 프롬프트를 복사하고 기본 사이트를 새 탭으로 엽니다.
-                  열린 사이트의 입력창에 직접 붙여넣으세요.
+                  열린 사이트의 입력창에 직접 붙여넣고 전송하세요.
                 </p>
                 <GeneratorsSettings />
               </section>
+              </>
             )}
           </>
         )}

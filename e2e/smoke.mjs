@@ -436,7 +436,7 @@ const run = async () => {
     await page.getByRole('button', { name: SEED_A, exact: true }).click()
     await page.getByText('프롬프트 복사됨').waitFor()
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (clip !== SEED_A) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith(SEED_A + ' 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
     const popup = await popupPromise
     if (!popup) throw new Error('no new tab opened')
     if (!popup.url().startsWith('https://chatgpt.com/'))
@@ -466,7 +466,7 @@ const run = async () => {
     if (opened !== 2) throw new Error(`2nd click should open another tab, opened=${opened}`)
 
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (clip !== SEED_B) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith(SEED_B + ' 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
     await page.getByText('프롬프트 복사됨').waitFor()
 
     // every opened tab is the configured chatgpt.com URL
@@ -597,7 +597,7 @@ const run = async () => {
     if (!popup || !popup.url().startsWith('https://chatgpt.com/'))
       throw new Error('내 생성 사이트 fallback did not open the tab: ' + (popup && popup.url()))
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (clip !== SEED_A) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith(SEED_A + ' 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
   })
 
   await testIf(DIRECT_ON, 'Direct Generate 성공 -> 이미지 표시 + "생성" 자동 체크', async (page) => {
@@ -847,7 +847,7 @@ const run = async () => {
 
     await modal.locator('.cal-kw', { hasText: '차례상' }).click()
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (clip !== '차례상') throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith('차례상 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
     await page.getByText('프롬프트 복사됨').waitFor()
   })
 

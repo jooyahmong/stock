@@ -1,13 +1,16 @@
 /**
  * Text handed to the external generator when a keyword is clicked.
  *
- * V1: the raw keyword. The optional template hook is here so a future
- * "Prompt Template" setting (Phase 2) plugs in without touching callers.
+ * Style instructions follow the keyword. Existing templates may place the
+ * keyword explicitly with {{keyword}}. No instruction means keyword only.
  */
 export function buildGeneratorText(keyword: string, template?: string | null): string {
   const kw = keyword.trim()
-  if (template && template.includes('{{keyword}}')) {
-    return template.split('{{keyword}}').join(kw)
+  if (!kw) return ''
+  const instruction = template?.trim()
+  if (!instruction) return kw
+  if (instruction.includes('{{keyword}}')) {
+    return instruction.split('{{keyword}}').join(kw)
   }
-  return kw
+  return `${kw} ${instruction}`
 }

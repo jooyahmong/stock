@@ -4,11 +4,11 @@ import { useUiStore } from '../store/uiStore'
 import { buildGeneratorText } from '../domain/prompt'
 import { copyText, openGptWindow } from '../lib/clipboard'
 import { isAllowedGptUrl } from '../lib/gptUrl'
-import { PROMPT_TEMPLATE_KEY } from '../lib/settingsKeys'
+import { useImageStyles } from './useImageStyles'
 
 /**
  * Keyword-text click behaviour for a saved generation site:
- *   1. build the prompt text (raw keyword in V1)
+ *   1. combine the keyword with the selected style instructions
  *   2. copy to clipboard
  *   3. open the configured URL in a new tab (every click — see clipboard.ts)
  * The click never auto-checks "생성" — the user does that after real work.
@@ -16,24 +16,27 @@ import { PROMPT_TEMPLATE_KEY } from '../lib/settingsKeys'
 export function useRunKeyword() {
   const showToast = useUiStore((s) => s.showToast)
   const { data: generators } = useRepoQuery((r) => r.listGenerators(), [])
-  const { data: template } = useRepoQuery(
-    (r) => r.getSetting<string>(PROMPT_TEMPLATE_KEY),
-    [],
-  )
+  const { data: styles, error: styleError } = useImageStyles()
 
   return useCallback(
     async (keyword: string, onNeedSettings?: () => void) => {
-      const text = buildGeneratorText(keyword, template)
-      const copying = copyText(text)
+      if (!styles || styleError) {
+        showToast('그림 스타일을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.', 'error')
+        return
+      }
+      const style = styles.styles.find((s) => s.id === styles.selectedId)
+      const text = buildGeneratorText(keyword, style?.prompt)
+      // Finish copying while the planner still has focus. Opening a new tab
+      // first can make the browser reject a pending clipboard write.
+      const copied = await copyText(text)
 
       const def =
         generators?.find((g) => g.isDefault) ?? generators?.[0] ?? null
 
       if (!def || !def.url) {
-        const copied = await copying
         showToast(
           copied
-            ? '키워드를 복사했습니다. 설정 > 생성에서 생성 사이트 주소를 먼저 저장하세요.'
+            ? '프롬프트를 복사했습니다. 설정 > 생성에서 생성 사이트 주소를 먼저 저장하세요.'
             : '설정 > 생성에서 생성 사이트 주소를 먼저 저장하세요.',
           'error',
         )
@@ -42,7 +45,6 @@ export function useRunKeyword() {
       }
 
       if (!isAllowedGptUrl(def.url)) {
-        await copying
         showToast(
           '등록된 생성 사이트 주소가 올바르지 않습니다. HTTPS 주소를 다시 저장하세요.',
           'error',
@@ -51,9 +53,7 @@ export function useRunKeyword() {
         return
       }
 
-      // Open during the original click, before awaiting clipboard permissions.
       const result = openGptWindow(def.url)
-      const copied = await copying
       if (result === 'popup-blocked') {
         showToast(
           `${copied ? '복사됨. ' : ''}팝업이 차단되었습니다. 팝업을 허용해주세요.`,
@@ -67,6 +67,6 @@ export function useRunKeyword() {
           : `${def.name} 탭 열림 (복사 실패)`,
       )
     },
-    [generators, template, showToast],
+    [generators, styles, styleError, showToast],
   )
 }
