@@ -275,8 +275,28 @@ input[type='radio'] {
   border-radius: 6px;
   background: var(--bg);
 }
-.toolbar-spacer {
-  flex: 1 1 auto;
+.plan-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 12px;
+}
+.plan-view-header .view-toggle {
+  margin-top: 0;
+  flex: none;
+}
+.plan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.plan-actions .btn {
+  white-space: nowrap;
 }
 .select-all {
   display: inline-flex;
@@ -1371,8 +1391,10 @@ input[type='radio'] {
     position: relative;
     padding-right: 60px;
   }
-  .toolbar-spacer {
-    display: none;
+  .plan-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
   }
   .pg-progress {
     display: none;

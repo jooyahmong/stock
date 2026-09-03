@@ -20,7 +20,7 @@ import { readViewMode, writeViewMode, type ViewMode } from './lib/viewModePref'
 import { Toast } from './components/Toast'
 import { PlanBar } from './components/PlanBar'
 import { ViewToggle } from './components/ViewToggle'
-import { Toolbar } from './components/Toolbar'
+import { Toolbar, PlanActions } from './components/Toolbar'
 import { SelectionBar } from './components/SelectionBar'
 import { ProgressPanel } from './components/ProgressPanel'
 import { PeriodGroup } from './components/PeriodGroup'
@@ -269,11 +269,25 @@ export default function App() {
 
       {activePlan && snapshot && grouping && (
         <>
-          <ViewToggle
-            viewMode={viewMode}
-            onChange={setViewMode}
-            calendarAvailable={calendarAvailable}
-          />
+          <div className="plan-view-header">
+            <ViewToggle
+              viewMode={viewMode}
+              onChange={setViewMode}
+              calendarAvailable={calendarAvailable}
+            />
+            <PlanActions
+              onOpenImport={() => setShowImport(true)}
+              onOpenSettings={() => setShowSettings(true)}
+              onAddPeriod={() => { setViewMode('list'); setAddingPeriod(true) }}
+              periodNoun={periodNoun(kind)}
+              onDownloadTemplate={() => downloadTemplate(activePlan, snapshot.statusColumns)}
+              onFullExport={() => {
+                downloadFullExport(activePlan, snapshot)
+                useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
+              }}
+              onOpenGpt={generationMode === 'my-gpt' && hasMyGpt ? openGpt : undefined}
+            />
+          </div>
 
           {viewMode === 'calendar' ? (
             <CalendarView
@@ -288,18 +302,6 @@ export default function App() {
             <>
               <Toolbar
                 snapshot={snapshot}
-                onOpenImport={() => setShowImport(true)}
-                onOpenSettings={() => setShowSettings(true)}
-                onAddPeriod={() => setAddingPeriod(true)}
-                periodNoun={periodNoun(kind)}
-                onDownloadTemplate={() => downloadTemplate(activePlan, snapshot.statusColumns)}
-                onFullExport={() => {
-                  downloadFullExport(activePlan, snapshot)
-                  useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
-                }}
-                onOpenGpt={
-                  generationMode === 'my-gpt' && hasMyGpt ? openGpt : undefined
-                }
                 visibleCount={visibleKeywordIds.length}
                 allVisibleSelected={allVisibleSelected}
                 onToggleSelectAllVisible={(checked) =>

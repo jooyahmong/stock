@@ -3,25 +3,11 @@ import { useUiStore } from '../store/uiStore'
 
 export function Toolbar({
   snapshot,
-  onOpenImport,
-  onOpenSettings,
-  onAddPeriod,
-  periodNoun,
-  onDownloadTemplate,
-  onFullExport,
-  onOpenGpt,
   visibleCount,
   allVisibleSelected,
   onToggleSelectAllVisible,
 }: {
   snapshot: PlanSnapshot
-  onOpenImport: () => void
-  onOpenSettings: () => void
-  onAddPeriod: () => void
-  periodNoun: string
-  onDownloadTemplate: () => void
-  onFullExport: () => void
-  onOpenGpt?: () => void
   visibleCount: number
   allVisibleSelected: boolean
   onToggleSelectAllVisible: (checked: boolean) => void
@@ -74,9 +60,24 @@ export function Toolbar({
           </optgroup>
         ))}
       </select>
+    </div>
+  )
+}
 
-      <div className="toolbar-spacer" />
-
+export function PlanActions({
+  onOpenImport, onOpenSettings, onAddPeriod, periodNoun,
+  onDownloadTemplate, onFullExport, onOpenGpt,
+}: {
+  onOpenImport: () => void
+  onOpenSettings: () => void
+  onAddPeriod: () => void
+  periodNoun: string
+  onDownloadTemplate: () => void
+  onFullExport: () => void
+  onOpenGpt?: () => void
+}) {
+  return (
+    <div className="plan-actions" role="group" aria-label="계획 도구">
       {onOpenGpt && (
         <button
           className="btn btn-sm btn-gpt"
