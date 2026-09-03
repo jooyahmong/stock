@@ -128,7 +128,7 @@ export function SettingsModal({
         {tab === 'stages' && (
           <>
             <p className="hint">
-              계획 <b>{plan.name}</b>의 체크 항목입니다. 왼쪽 체크로 목록 표시 여부를
+              계획 <strong className="settings-plan-name">[ {plan.name} ]</strong>의 체크 항목입니다. 왼쪽 체크로 목록 표시 여부를
               바꿉니다. 기본값 <b>생성 / 미캔</b>은 이름 변경·순서 변경만 가능합니다.
             </p>
             <StatusColumnsSettings

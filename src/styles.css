@@ -675,6 +675,10 @@ input[type='radio'] {
 }
 
 /* ---------- settings ---------- */
+.settings-plan-name {
+  color: #000;
+  font-weight: 800;
+}
 .modal-backdrop-contained {
   align-items: center;
   padding: 16px;
@@ -775,9 +779,11 @@ input[type='radio'] {
   margin-top: 4px;
   font-size: 11px;
 }
-.generator-step-panel .gs-block > h4 {
+.generator-step-panel .gs-block > h4,
+.storage-settings .gs-block > h4 {
   font-size: 19px;
   color: var(--text);
+  font-weight: 700;
   letter-spacing: 0;
 }
 .generator-step-panel .hint {
