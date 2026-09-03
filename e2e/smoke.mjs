@@ -98,6 +98,7 @@ let SEED_D = ''
 
 async function boot(page) {
   await page.goto(BASE, { waitUntil: 'networkidle' })
+  await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
   await page.locator('.period-group .kw-text').first().waitFor({ timeout: 15000 })
   await page.waitForTimeout(300)
   const g0 = page.locator('.period-group').nth(0).locator('.kw-text')
@@ -133,6 +134,19 @@ const run = async () => {
     await ctx.close()
     console.log(`Direct Generate: ${DIRECT_ON ? 'ON' : 'OFF (관련 테스트 건너뜀)'}`)
   }
+
+  await test('calendar is the initial main view and later view choices persist', async (page) => {
+    await page.goto(BASE, { waitUntil: 'networkidle' })
+    const calendar = page.getByRole('tab', { name: '달력 보기', exact: true })
+    if (await calendar.getAttribute('aria-selected') !== 'true') throw new Error('Calendar must be the initial view')
+    await page.locator('.cal-grid').waitFor()
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.locator('.toolbar .search').waitFor()
+    await calendar.click()
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.locator('.cal-grid').waitFor()
+  })
 
   await test('seed = "365 스톡 키워드": 365 groups, 2 kw/day, no sample data', async (page) => {
     await boot(page)
