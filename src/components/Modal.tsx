@@ -6,12 +6,14 @@ export function Modal({
   children,
   width = 520,
   footer,
+  contained = false,
 }: {
   title: string
   onClose: () => void
   children: ReactNode
   width?: number
   footer?: ReactNode
+  contained?: boolean
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -21,8 +23,15 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  useEffect(() => {
+    if (!contained) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [contained])
+
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
+    <div className={`modal-backdrop${contained ? ' modal-backdrop-contained' : ''}`} onMouseDown={onClose}>
       <div
         className="modal"
         style={{ maxWidth: width }}

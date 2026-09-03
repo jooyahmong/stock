@@ -81,7 +81,7 @@ function StyleEditor({ style, onSave, onDelete, onCancel }: {
         onChange={(e) => setName(e.target.value)} />
       <label className="field-label" htmlFor="image-style-prompt">스타일 지시문</label>
       <textarea id="image-style-prompt" className="field-input" rows={4} value={prompt}
-        placeholder="예: 2D 플랫 무라인 스타일로 그려줘. 외곽선과 그림자 없이 흰 배경으로 표현해줘."
+        placeholder="예: 2D 플랫 일러스트 스타일의 그림을 그려줘. 흰 배경으로 실제 이미지를 생성해줘."
         onChange={(e) => setPrompt(e.target.value)} />
       <p className="hint">주제 키워드는 앞에 자동으로 붙습니다. 수정한 내용은 ‘스타일 저장’을 눌러 적용하세요.</p>
       <label className="field-label" htmlFor="image-style-example">미리보기용 키워드</label>

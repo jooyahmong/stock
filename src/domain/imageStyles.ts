@@ -10,7 +10,8 @@ export interface ImageStyleSettings {
   selectedId: string | null
 }
 
-export const DEFAULT_IMAGE_STYLES: ImageStyle[] = [
+// Retained only to recognize unedited presets saved by earlier versions.
+const PREVIOUS_IMAGE_STYLES: ImageStyle[] = [
   { id: 'flat', name: '2D 플랫 무라인', prompt: '2D 플랫 무라인 스타일로 그려줘. 외곽선과 그림자 없이 단순한 도형과 선명한 색면을 사용하고, 흰 배경에 주제가 잘 드러나게 표현해줘.' },
   { id: '3d', name: '3D', prompt: '3D 일러스트 스타일로 그려줘. 부드러운 조명, 둥근 형태, 자연스러운 입체감과 은은한 그림자를 사용하고 깔끔한 배경으로 표현해줘.' },
   { id: 'line', name: '라인 아이콘', prompt: '라인 아이콘 스타일로 그려줘. 일정한 두께의 깔끔한 선과 단순한 형태를 사용하고, 채색과 그림자 없이 흰 배경에 표현해줘.' },
@@ -23,11 +24,32 @@ export const DEFAULT_IMAGE_STYLES: ImageStyle[] = [
   { id: 'silhouette', name: '미니멀 실루엣', prompt: '미니멀 실루엣 스타일로 그려줘. 주제의 특징을 알아볼 수 있는 단순한 윤곽과 단색 면을 사용하고, 흰 배경에 세부 장식 없이 표현해줘.' },
 ]
 
+export const DEFAULT_IMAGE_STYLES: ImageStyle[] = PREVIOUS_IMAGE_STYLES.map((style) => ({
+  ...style,
+  name: style.id === 'flat' ? '2D 플랫 일러스트' : style.name,
+  prompt: style.id === 'flat'
+    ? '2D 플랫 일러스트 스타일의 그림을 그려줘. 단순한 도형과 선명한 색면, 흰 배경을 사용해줘. 설명문이 아니라 실제 이미지를 생성해줘.'
+    : style.prompt.replace('스타일로 그려줘', '스타일의 그림을 그려줘').split('표현해줘').join('그림을 그려줘')
+      + ' 설명문이 아니라 실제 이미지를 생성해줘.',
+}))
+
+function updateUneditedPreset(style: ImageStyle): ImageStyle {
+  const previous = PREVIOUS_IMAGE_STYLES.find((item) => item.id === style.id)
+  const current = DEFAULT_IMAGE_STYLES.find((item) => item.id === style.id)
+  if (!previous || !current) return style
+  return {
+    ...style,
+    name: style.name === previous.name ? current.name : style.name,
+    prompt: style.prompt === previous.prompt ? current.prompt : style.prompt,
+  }
+}
+
 /** Missing preferences get defaults; an intentionally empty list stays empty. */
 export function resolveImageStyles(saved: ImageStyleSettings | undefined, legacyTemplate?: string): ImageStyleSettings {
   if (saved) {
     return {
       ...saved,
+      styles: saved.styles.map(updateUneditedPreset),
       selectedId: saved.selectedId === null ? null
         : saved.styles.find((s) => s.id === saved.selectedId)?.id ?? saved.styles[0]?.id ?? null,
     }

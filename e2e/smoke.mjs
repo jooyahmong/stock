@@ -427,6 +427,7 @@ const run = async () => {
     await boot(page)
     // configure a 내 생성 사이트 generator
     await page.getByRole('button', { name: '⚙ 설정' }).click()
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
     await page.locator('.gen-add input.field-input').first().fill('Test GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
     await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
@@ -436,7 +437,7 @@ const run = async () => {
     await page.getByRole('button', { name: SEED_A, exact: true }).click()
     await page.getByText('프롬프트 복사됨').waitFor()
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (!clip.startsWith(SEED_A + ' 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith(SEED_A + ' 2D 플랫 일러스트 스타일의 그림을 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
     const popup = await popupPromise
     if (!popup) throw new Error('no new tab opened')
     if (!popup.url().startsWith('https://chatgpt.com/'))
@@ -447,6 +448,7 @@ const run = async () => {
     await stubChatgpt(context)
     await boot(page)
     await page.getByRole('button', { name: '⚙ 설정' }).click()
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
     await page.locator('.gen-add input.field-input').first().fill('T GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
     await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
@@ -466,7 +468,7 @@ const run = async () => {
     if (opened !== 2) throw new Error(`2nd click should open another tab, opened=${opened}`)
 
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (!clip.startsWith(SEED_B + ' 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith(SEED_B + ' 2D 플랫 일러스트 스타일의 그림을 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
     await page.getByText('프롬프트 복사됨').waitFor()
 
     // every opened tab is the configured chatgpt.com URL
@@ -483,6 +485,7 @@ const run = async () => {
   await test('생성 사이트 URL 검증: HTTPS 사이트 허용, 프로토콜·자격증명 차단', async (page) => {
     await boot(page)
     await page.getByRole('button', { name: '⚙ 설정' }).click()
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
     const nameInput = page.locator('.gen-add input.field-input').first()
     const urlInput = page.locator('.gen-add input.field-input').nth(1)
     const addBtn = page.locator('.gen-add').getByRole('button', { name: '추가' })
@@ -546,6 +549,7 @@ const run = async () => {
     await page.locator('.gs-radio', { hasText: 'Direct Generate' }).waitFor()
     await page.locator('.gs-radio', { hasText: '내 생성 사이트' }).first().waitFor()
     // default = my-gpt → 생성 사이트 설정만, Direct 상세는 숨김
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
     await page.getByRole('heading', { name: '내 생성 사이트' }).waitFor()
     if (await page.getByRole('button', { name: 'Test Connection' }).count())
       throw new Error('Direct 상세가 my-gpt 모드에서 보임')
@@ -580,6 +584,7 @@ const run = async () => {
     await boot(page)
     await openGenerationTab(page)
     // register 내 생성 사이트
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
     await page.locator('.gen-add input.field-input').first().fill('T GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
     await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
@@ -597,7 +602,7 @@ const run = async () => {
     if (!popup || !popup.url().startsWith('https://chatgpt.com/'))
       throw new Error('내 생성 사이트 fallback did not open the tab: ' + (popup && popup.url()))
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (!clip.startsWith(SEED_A + ' 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith(SEED_A + ' 2D 플랫 일러스트 스타일의 그림을 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
   })
 
   await testIf(DIRECT_ON, 'Direct Generate 성공 -> 이미지 표시 + "생성" 자동 체크', async (page) => {
@@ -822,6 +827,7 @@ const run = async () => {
     await newPlan(page, 'Cal Test 4')
     // 내 생성 사이트 so keyword click has a handler
     await page.getByRole('button', { name: '⚙ 설정' }).click()
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
     await page.locator('.gen-add input.field-input').first().fill('T GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
     await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
@@ -847,7 +853,7 @@ const run = async () => {
 
     await modal.locator('.cal-kw', { hasText: '차례상' }).click()
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    if (!clip.startsWith('차례상 2D 플랫 무라인 스타일로 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
+    if (!clip.startsWith('차례상 2D 플랫 일러스트 스타일의 그림을 그려줘.')) throw new Error('clipboard = ' + JSON.stringify(clip))
     await page.getByText('프롬프트 복사됨').waitFor()
   })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Plan, PlanSnapshot } from '../../repo/types'
 import { Modal } from '../Modal'
 import { periodKind, periodColumnLabel } from '../../domain/periods'
@@ -13,6 +13,11 @@ import {
 } from '../../generation'
 
 type Tab = 'generator' | 'stages' | 'storage'
+const GENERATOR_STEPS = [
+  { id: 'style', title: '그림 스타일', description: '그림의 분위기 정하기' },
+  { id: 'site', title: '생성 사이트', description: '그림을 만들 곳 연결하기' },
+] as const
+type GeneratorStep = typeof GENERATOR_STEPS[number]['id']
 
 export function SettingsModal({
   plan,
@@ -30,33 +35,67 @@ export function SettingsModal({
   onFullExport: () => void
 }) {
   const [tab, setTab] = useState<Tab>('generator')
+  const [step, setStep] = useState<GeneratorStep>('style')
+  const panelRef = useRef<HTMLDivElement>(null)
   const genCfg = useGenerationConfig()
   const mode = directGenerationEnabled ? genCfg.defaultGenerationMode : 'my-gpt'
 
+  useEffect(() => {
+    panelRef.current?.scrollTo({ top: 0 })
+  }, [tab, step, mode])
+
+  function navigateStep(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1
+      : event.key === 'ArrowRight' || event.key === 'ArrowLeft' ? 1 - index : null
+    if (next === null) return
+    event.preventDefault()
+    const id = GENERATOR_STEPS[next].id
+    setStep(id)
+    document.getElementById(`generator-step-${id}`)?.focus()
+  }
+
   return (
-    <Modal title="설정" onClose={onClose} width={640}>
-      <div className="settings-tabs">
+    <Modal title="설정" onClose={onClose} width={720} contained>
+      <div className="settings-tabs" role="group" aria-label="설정 메뉴">
         <button
           className={tab === 'generator' ? 'is-active' : ''}
+          aria-pressed={tab === 'generator'}
           onClick={() => setTab('generator')}
         >
           생성
         </button>
         <button
           className={tab === 'stages' ? 'is-active' : ''}
+          aria-pressed={tab === 'stages'}
           onClick={() => setTab('stages')}
         >
           체크 항목
         </button>
         <button
           className={tab === 'storage' ? 'is-active' : ''}
+          aria-pressed={tab === 'storage'}
           onClick={() => setTab('storage')}
         >
           저장 · 백업
         </button>
       </div>
 
-      <div className="settings-panel">
+      {tab === 'generator' && mode === 'my-gpt' && (
+        <div className="generator-steps" role="tablist" aria-label="생성 설정 단계">
+          {GENERATOR_STEPS.map((item, index) => (
+            <button key={item.id} role="tab" id={`generator-step-${item.id}`}
+              aria-controls={`generator-panel-${item.id}`} aria-selected={step === item.id}
+              tabIndex={step === item.id ? 0 : -1}
+              className={`generator-step${step === item.id ? ' is-active' : ''}`}
+              onClick={() => setStep(item.id)} onKeyDown={(event) => navigateStep(event, index)}>
+              <span className="generator-step-number" aria-hidden="true">{index + 1}</span>
+              <span><strong>{item.title}</strong><small>{item.description}</small></span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="settings-panel" ref={panelRef}>
         {tab === 'generator' && (
           <>
             {directGenerationEnabled && <GenerationModeChooser />}
@@ -66,16 +105,21 @@ export function SettingsModal({
 
             {mode === 'my-gpt' && (
               <>
-              <ImageStylesSettings />
-              <section className="gs-block">
-                <h4>내 생성 사이트</h4>
-                <p className="hint">
-                  ChatGPT·Gemini·Midjourney 등 사용하는 사이트를 등록하세요. 키워드를
-                  클릭하면 프롬프트를 복사하고 기본 사이트를 새 탭으로 엽니다.
-                  열린 사이트의 입력창에 직접 붙여넣고 전송하세요.
-                </p>
-                <GeneratorsSettings />
-              </section>
+                <div className="generator-step-panel" role="tabpanel" id="generator-panel-style"
+                  aria-labelledby="generator-step-style" hidden={step !== 'style'} tabIndex={0}>
+                  <ImageStylesSettings />
+                </div>
+                <div className="generator-step-panel" role="tabpanel" id="generator-panel-site"
+                  aria-labelledby="generator-step-site" hidden={step !== 'site'} tabIndex={0}>
+                  <section className="gs-block">
+                    <h4>내 생성 사이트</h4>
+                    <p className="hint">
+                      키워드를 누르면 선택한 스타일 지시문을 복사하고 기본 사이트를 엽니다.
+                      열린 사이트에 붙여넣고 전송하세요.
+                    </p>
+                    <GeneratorsSettings />
+                  </section>
+                </div>
               </>
             )}
           </>
