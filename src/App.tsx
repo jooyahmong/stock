@@ -160,13 +160,14 @@ export default function App() {
     })
   }, [snapshot, extraPeriods, kind, search, filter])
 
-  // Keep today first; past work stays available separately, including in search.
+  // Date plans show upcoming work in the list; past work remains in the calendar.
   const listView = useMemo(
     () => getListView(
       grouping?.groups ?? [],
       kind === 'date' ? today : currentPeriod(kind),
       listWindow,
       grouping?.filtering ?? false,
+      kind !== 'date',
     ),
     [grouping, listWindow, kind, today],
   )
@@ -224,7 +225,7 @@ export default function App() {
     const list = new Set(extraPeriods ?? [])
     list.add(raw.trim())
     await repo.setSetting(EXTRA_PERIODS_KEY(activePlanId), [...list])
-    if (raw.trim() < currentPeriod(kind)) {
+    if (kind !== 'date' && raw.trim() < currentPeriod(kind)) {
       setListWindow((w) => ({ ...w, past: true }))
     }
     setAddingPeriod(false)
@@ -330,8 +331,15 @@ export default function App() {
                     onEditPeriod={setEditingPeriod}
                   />
                 ))}
-                {!grouping.filtering && listView.visible.length === 0 && listView.past.length > 0 && (
-                  <p className="empty-state">오늘 이후의 일정이 없습니다. 지난 날짜를 펼쳐 작업을 확인하세요.</p>
+                {listView.visible.length === 0 && listView.hasPast && (
+                  <p className="empty-state">
+                    {calendarAvailable ? (
+                      <>
+                        {grouping.filtering ? '오늘 이후에 조건에 맞는 키워드가 없습니다.' : '오늘 이후의 일정이 없습니다.'}
+                        {' '}지난 기록은 <button className="linkish" onClick={() => setViewMode('calendar')}>달력 보기</button>에서 확인하세요.
+                      </>
+                    ) : '현재 이후의 일정이 없습니다. 지난 기간을 펼쳐 작업을 확인하세요.'}
+                  </p>
                 )}
                 {listView.windowed && !listWindow.all && !listView.atEnd && (
                   <button
@@ -354,7 +362,7 @@ export default function App() {
                   >
                     {listWindow.all
                       ? '오늘부터 보기'
-                      : `전체 ${grouping.groups.length}일 보기`}
+                      : `전체 ${listView.upcomingCount + listView.past.length}일 보기`}
                   </button>
                 )}
                 {listView.past.length > 0 && (
@@ -479,16 +487,42 @@ export default function App() {
   )
 }
 
-const SAMPLE_VIDEO_URL = 'https://canva.link/b5hfb2is2lz45zd'
+const HELP_TABS = [
+  { id: 'guide', title: '사용 방법', description: '계획부터 생성·백업까지' },
+  { id: 'notice', title: '이용 안내', description: '외부 AI 이용과 책임 범위' },
+] as const
 
 function HelpModal({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<typeof HELP_TABS[number]['id']>('guide')
   return (
-    <Modal title="사용법" onClose={onClose} width={560}>
-      <div className="help-body">
+    <Modal title="사용법" onClose={onClose} width={720} contained>
+      <div className="generator-steps" role="tablist" aria-label="사용법 메뉴">
+        {HELP_TABS.map((item, index) => (
+          <button key={item.id} role="tab" id={`help-tab-${item.id}`}
+            aria-controls={`help-panel-${item.id}`} aria-selected={tab === item.id}
+            tabIndex={tab === item.id ? 0 : -1}
+            className={`generator-step${tab === item.id ? ' is-active' : ''}`}
+            onClick={() => setTab(item.id)} onKeyDown={(event) => {
+              const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1
+                : event.key === 'ArrowRight' || event.key === 'ArrowLeft' ? 1 - index : null
+              if (next === null) return
+              event.preventDefault()
+              setTab(HELP_TABS[next].id)
+              document.getElementById(`help-tab-${HELP_TABS[next].id}`)?.focus()
+            }}>
+            <span className="generator-step-number" aria-hidden="true">{index + 1}</span>
+            <span><strong>{item.title}</strong><small>{item.description}</small></span>
+          </button>
+        ))}
+      </div>
+      <div className="settings-panel help-body" key={tab} role="tabpanel"
+        id={`help-panel-${tab}`} aria-labelledby={`help-tab-${tab}`} tabIndex={0}>
+        {tab === 'guide' ? (
         <ol className="help-steps">
           <li>
-            <b>키워드 확인</b> — 목록에 오늘 기준 365일 스톡 키워드가 날짜별로
-            들어 있습니다. 자유롭게 수정·추가(+ 날짜 추가)·삭제하세요.
+            <b>키워드 확인</b> — 달력이 기본 화면입니다. 날짜별 키워드를 확인하고,
+            오늘 이후 작업은 목록 보기에서 수정·추가(+ 날짜 추가)·삭제하세요.
+            지난 기록은 달력에서 확인할 수 있습니다.
           </li>
           <li>
             <b>생성 사이트 연결</b> — 설정 → 생성 → 생성 사이트에 ChatGPT·Gemini·Midjourney 등의 주소를
@@ -497,7 +531,8 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           </li>
           <li>
             <b>진행 체크</b> — 각 키워드의 <b>생성 / 미캔</b> 체크박스로 상태를
-            표시합니다. 체크 항목은 설정 → 체크 항목에서 추가할 수 있습니다.
+            표시합니다. 체크박스는 목록 보기에서 사용하며, 체크 항목은
+            설정 → 체크 항목에서 추가할 수 있습니다.
           </li>
           <li>
             <b>달력 보기</b> — 월별 진행 현황. <b>생성</b>을 체크하면 날짜와
@@ -509,9 +544,8 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             체크값을 덮어씀). <b>Template</b>로 빈 양식을 받을 수 있습니다.
           </li>
         </ol>
-
+        ) : (
         <section className="help-gpts">
-          <h4>생성 사이트 이용 안내</h4>
           <ul>
             <li>
               <b>개인 계정과 외부 서비스</b> — AI 사이트는 이용자가 본인 계정으로
@@ -560,29 +594,8 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             <a href="https://docs.midjourney.com/hc/en-us/articles/32083055291277-Terms-of-Service" target="_blank" rel="noopener noreferrer">Midjourney</a>
             {' · '}그 외 사이트는 해당 서비스의 약관·개인정보처리방침을 확인하세요.
           </p>
-          <ul>
-            <li>
-              샘플 영상에 쓰인 GPTs 지침 예시:
-              <blockquote className="help-quote">
-                키워드를 치면 심플한 2D 벡터 스타일의 그림을 그려주세요. 그림자
-                없기, 하얀 배경.
-              </blockquote>
-            </li>
-          </ul>
         </section>
-
-        <section className="help-sample">
-          <h4>샘플 영상</h4>
-          {/* 680×926 세로 영상 자리. 나중에 iframe 임베드로 교체 가능. */}
-          <a
-            className="help-sample-frame"
-            href={SAMPLE_VIDEO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span>▶ 샘플 영상 보기 (Canva)</span>
-          </a>
-        </section>
+        )}
       </div>
     </Modal>
   )

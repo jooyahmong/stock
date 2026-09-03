@@ -272,15 +272,16 @@ const run = async () => {
     await row.locator('.status-check', { hasText: 'Adobe Stock' }).waitFor()
   })
 
-  await test('푸터 "사용법": GPTs 안내 + 지침 예시 + 샘플 영상 자리', async (page) => {
+  await test('푸터 "사용법": 고정 팝업의 사용 방법 / 이용 안내 탭', async (page) => {
     await boot(page)
     await page.getByRole('button', { name: '사용법' }).click()
-    await page.getByText('ChatGPT Plus 이상').waitFor()
-    await page.getByText('심플한 2D 벡터 스타일').waitFor()
-    const sample = page.locator('.help-sample-frame')
-    await sample.waitFor()
-    const href = await sample.getAttribute('href')
-    if (!href || !href.includes('canva')) throw new Error('sample link missing: ' + href)
+    await page.locator('.modal-backdrop-contained .help-steps').waitFor()
+    await page.getByRole('tab', { name: '이용 안내 외부 AI 이용과 책임 범위', exact: true }).click()
+    await page.getByText('상업적 이용 조건', { exact: true }).waitFor()
+    await page.getByText('책임 범위', { exact: true }).waitFor()
+    if (await page.locator('.help-sample-frame').count()) throw new Error('Sample video must be removed')
+    await page.getByRole('tab', { name: '사용 방법 계획부터 생성·백업까지', exact: true }).click()
+    await page.locator('.help-steps').waitFor()
   })
 
   await test('Settings > 저장 · 백업: Local 안내 + Excel 백업 (동기화 옵션 없음)', async (page) => {

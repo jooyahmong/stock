@@ -6,6 +6,25 @@ const groups = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']
 const anchor = '2026-09-03'
 
 describe('today-first list', () => {
+  it('keeps past dates out of calendar-backed lists, including search and full view', () => {
+    for (const [all, filtering] of [[false, false], [true, false], [false, true]]) {
+      const view = getListView(groups, anchor, { ...DEFAULT_LIST_WINDOW, all, past: true }, filtering, false)
+      expect(view.visible).toEqual(groups.slice(2))
+      expect(view.past).toEqual([])
+      expect(view.upcomingCount).toBe(2)
+      expect(view.hasPast).toBe(true)
+    }
+    expect(groups).toHaveLength(4)
+  })
+
+  it('identifies past-only calendar plans for the calendar navigation message', () => {
+    const view = getListView(groups.slice(0, 2), anchor, DEFAULT_LIST_WINDOW, false, false)
+    expect(view.visible).toEqual([])
+    expect(view.past).toEqual([])
+    expect(view.hasPast).toBe(true)
+    expect(view.upcomingCount).toBe(0)
+  })
+
   it('hides past dates even for a short plan and preserves them newest first', () => {
     const view = getListView(groups, anchor, DEFAULT_LIST_WINDOW, false)
     expect(view.visible).toEqual(groups.slice(2))
