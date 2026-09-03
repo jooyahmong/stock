@@ -100,7 +100,7 @@ export default function App() {
   const openGpt = useCallback(() => {
     if (!defaultGpt || !isAllowedGptUrl(defaultGpt.url)) {
       useUiStore.getState().showToast(
-        '먼저 설정 > 생성에서 My GPT 링크를 저장하세요.',
+        '먼저 설정 > 생성에서 생성 사이트 주소를 저장하세요.',
         'error',
       )
       setShowSettings(true)
@@ -489,7 +489,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             들어 있습니다. 자유롭게 수정·추가(+ 날짜 추가)·삭제하세요.
           </li>
           <li>
-            <b>내 GPT 연결</b> — 설정 → 생성 → My GPT에 ChatGPT/GPTs 링크를
+            <b>생성 사이트 연결</b> — 설정 → 생성 → 내 생성 사이트에 ChatGPT·Gemini·Midjourney 등의 주소를
             저장합니다. 키워드를 클릭하면 프롬프트가 복사되고 그 링크가 새 탭으로
             열립니다. 거기에 붙여넣어 이미지를 생성하세요(자동 전송은 안 함).
           </li>
@@ -509,11 +509,11 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         </ol>
 
         <section className="help-gpts">
-          <h4>GPTs 안내</h4>
+          <h4>생성 사이트 이용 안내</h4>
           <ul>
             <li>
-              GPTs는 <b>ChatGPT Plus 이상</b>에서만 만들 수 있고, <b>다른 사람과
-              공유되지 않습니다</b>(본인 계정에서만 사용).
+              각 사이트에 본인 계정으로 로그인해 사용하세요. 이용 가능한 기능과
+              요금은 해당 사이트의 정책과 가입한 요금제에 따라 달라집니다.
             </li>
             <li>
               샘플 영상에 쓰인 GPTs 지침 예시:
@@ -555,14 +555,15 @@ function DataNoticeModal({ onClose }: { onClose: () => void }) {
         <li>
           {directGenerationEnabled ? (
             <>
-              My GPT 링크와 Direct Generate API Key도 이 브라우저에만 저장됩니다.
-              키워드 클릭 시 사용자가 지정한 GPT / OpenAI 주소로만 직접 요청이
-              전송됩니다.
+              생성 사이트 링크와 Direct Generate API Key도 이 브라우저에만 저장됩니다.
+              링크 방식은 프롬프트를 복사하고 사이트를 열며, 직접 붙여넣어 사용합니다.
+              Direct Generate는 설정한 API 제공자에게 프롬프트를 전송합니다.
             </>
           ) : (
             <>
-              My GPT 링크도 이 브라우저에만 저장됩니다. 키워드 클릭 시 사용자가
-              지정한 GPT 주소로만 직접 요청이 전송됩니다.
+              생성 사이트 링크도 이 브라우저에만 저장됩니다. 키워드를 클릭하면
+              프롬프트를 복사하고 해당 사이트를 엽니다. 프롬프트는 자동 전송되지
+              않으며, 사용자가 직접 붙여넣어 사용합니다.
             </>
           )}
         </li>

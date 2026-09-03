@@ -81,9 +81,9 @@ export function Toolbar({
         <button
           className="btn btn-sm btn-gpt"
           onClick={onOpenGpt}
-          title="내 GPT 탭 열기 (이후 키워드 클릭은 프롬프트만 복사됩니다)"
+          title="기본 생성 사이트를 새 탭으로 열기"
         >
-          GPT 열기
+          생성 사이트 열기
         </button>
       )}
       <button className="btn btn-sm" onClick={onAddPeriod}>

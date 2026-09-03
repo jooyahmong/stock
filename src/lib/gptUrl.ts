@@ -1,13 +1,8 @@
 /**
- * My GPT link validation.
- *
- * User-entered URLs are NOT trusted to be ChatGPT just because they were typed.
- * A My GPT URL is accepted only when it is:
- *   - the https: protocol (blocks javascript:, data:, http:, blob:, …)
- *   - hosted on chatgpt.com (or www.chatgpt.com)
- * Anything else — arbitrary external hosts, look-alike domains — is rejected.
+ * Validate a user-selected generation website. The historical export name is
+ * retained for existing callers; links may point to any HTTPS website.
+ * Embedded credentials and executable/non-HTTPS protocols are never accepted.
  */
-const ALLOWED_HOSTS = new Set(['chatgpt.com', 'www.chatgpt.com'])
 
 export function isAllowedGptUrl(raw: string): boolean {
   let url: URL
@@ -17,7 +12,7 @@ export function isAllowedGptUrl(raw: string): boolean {
     return false
   }
   if (url.protocol !== 'https:') return false
-  return ALLOWED_HOSTS.has(url.hostname.toLowerCase())
+  return Boolean(url.hostname) && !url.username && !url.password
 }
 
-export const GPT_URL_HINT = 'https 프로토콜의 chatgpt.com 링크만 허용됩니다.'
+export const GPT_URL_HINT = 'https://로 시작하는 생성 사이트 주소를 입력하세요. 아이디·비밀번호가 포함된 주소는 사용할 수 없습니다.'

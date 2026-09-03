@@ -63,7 +63,7 @@ export function KeywordRow({
       ) : (
         <button
           className="kw-text"
-          title="클릭하면 복사 후 지정한 GPT를 엽니다"
+          title="클릭하면 프롬프트를 복사하고 기본 생성 사이트를 엽니다"
           onClick={() => onRun(item.keyword, item.id)}
         >
           {item.keyword}

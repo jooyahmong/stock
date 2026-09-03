@@ -88,7 +88,7 @@ export class GoogleImageProvider implements ImageGenerationProvider {
       return (
         ` — 무료 등급(free tier) Gemini 키는 이미지 생성 허용량이 0입니다. ` +
         `이미지 생성을 쓰려면 Google Cloud에서 결제(빌링)를 활성화한 유료 키가 필요합니다. ` +
-        `결제 없이 쓰시려면 "My GPT" 방식을 이용하세요.`
+        `API 대신 사이트에서 직접 생성하려면 "내 생성 사이트" 방식을 이용하세요.`
       )
     return ''
   }

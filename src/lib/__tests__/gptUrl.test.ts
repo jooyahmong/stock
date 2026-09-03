@@ -17,12 +17,16 @@ describe('isAllowedGptUrl', () => {
     expect(isAllowedGptUrl('blob:https://chatgpt.com/uuid')).toBe(false)
   })
 
-  it('rejects other / look-alike hosts', () => {
-    expect(isAllowedGptUrl('https://evil.example.com/g/x')).toBe(false)
-    expect(isAllowedGptUrl('https://chatgpt.com.evil.com/g')).toBe(false)
-    expect(isAllowedGptUrl('https://chat.openai.com/g/x')).toBe(false)
-    expect(isAllowedGptUrl('https://notchatgpt.com')).toBe(false)
-    expect(isAllowedGptUrl('https://sub.chatgpt.com/g/x')).toBe(false)
+  it('accepts user-selected HTTPS generation websites', () => {
+    expect(isAllowedGptUrl('https://gemini.google.com/app')).toBe(true)
+    expect(isAllowedGptUrl('https://www.midjourney.com/imagine')).toBe(true)
+    expect(isAllowedGptUrl('https://claude.ai/new')).toBe(true)
+    expect(isAllowedGptUrl('https://example.com/create?mode=image')).toBe(true)
+  })
+
+  it('rejects embedded credentials', () => {
+    expect(isAllowedGptUrl('https://user:password@gemini.google.com/app')).toBe(false)
+    expect(isAllowedGptUrl('https://chatgpt.com@other.example/')).toBe(false)
   })
 
   it('rejects junk', () => {

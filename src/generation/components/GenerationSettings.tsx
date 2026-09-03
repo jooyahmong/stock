@@ -35,7 +35,7 @@ export function GenerationModeChooser() {
           onChange={() => store.setDefaultMode('my-gpt')}
         />
         <span>
-          <b>My GPT</b> — 내 GPT/GPTs에서 생성{' '}
+          <b>내 생성 사이트</b> — 복사 후 사이트에서 생성{' '}
           <span className="hint">(API 불필요)</span>
         </span>
       </label>

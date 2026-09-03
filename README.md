@@ -2,7 +2,7 @@
 
 **WOOJOO Stock Planner** — Stock Content Planner + Production Tracker.
 365일 날짜 기반 스톡 이미지 키워드를 관리하고, 키워드별 제작·작업 상태를
-체크하며, 사용자가 지정한 GPT/GPTs로 연결한다. AI 이미지 생성 사이트가 아니다.
+체크하며, 사용자가 지정한 ChatGPT·Gemini·Midjourney 등의 생성 사이트로 연결한다.
 (주간·월간 계획은 보류 — 순수 함수만 남겨 둠.)
 
 > V1은 https://stock.woojooland.com/ 에서 운영 중이다. 운영 배포 / Cloudflare / DNS 변경은 별도 요청 시 진행한다.
@@ -28,7 +28,7 @@ node e2e/smoke.mjs  # dev 서버가 떠 있는 상태에서 Playwright E2E 스�
 | 기본 작업상태 = 생성 / 미캔 | 계획 생성 시 seed. rename·순서변경만 가능(숨김·삭제 불가) |
 | 사용자 정의 작업상태 개수 무제한 | `statusColumns` + `keywordStatus` 분리 스키마 |
 | Full Export도 한 행 = 한 키워드 | `domain/excel.ts` — TRUE/FALSE, 날짜 반복 |
-| 키워드 클릭 = 복사 + GPT 새 탭 | 자동 전송 아님. 클릭해도 "생성" 자동 체크 안 함 |
+| 키워드 클릭 = 복사 + 생성 사이트 새 탭 | 자동 전송 아님. 클릭해도 "생성" 자동 체크 안 함 |
 
 ## 아키텍처 — 저장소 계층 분리
 
@@ -89,7 +89,7 @@ AppSetting    { key, value }   // 활성 계획, 목록 창, 빈 기간 목록, 
 ### Local Mode — 기본, 지금 구현됨
 
 - 회원가입·로그인 없음. 모든 데이터는 **현재 브라우저의 IndexedDB(Dexie)** 에 저장.
-  Plan · Keyword · 생성/미캔/사용자 체크 항목 · 체크 항목 순서·표시 · My GPT URL ·
+  Plan · Keyword · 생성/미캔/사용자 체크 항목 · 체크 항목 순서·표시 · 내 생성 사이트 URL ·
   기본 생성 방식 · 일반 설정.
 - 기기·브라우저마다 별개 저장소 (PC Chrome ↔ iPhone Safari 자동 공유 안 됨).
   PWA로 설치해도 같은 origin의 같은 브라우저 저장소를 쓰므로 Sync가 아니다.
@@ -101,7 +101,7 @@ AppSetting    { key, value }   // 활성 계획, 목록 창, 빈 기간 목록, 
 
 ### Sync Mode — 향후 (V1에서 구현 안 함)
 
-**V1 범위 = ① 로컬 저장 + My GPT 링크만.** 아래 ②는 설계만 확정해 둔 상태이며
+**V1 범위 = ① 로컬 저장 + 내 생성 사이트 링크만.** 아래 ②는 설계만 확정해 둔 상태이며
 **V1 UI에는 표시하지 않는다** (`설정 > 저장 · 백업`은 로컬 저장 안내 + Excel
 백업만). 회원가입은 어느 쪽에도 없다.
 
@@ -130,7 +130,7 @@ AppSetting    { key, value }   // 활성 계획, 목록 창, 빈 기간 목록, 
      없음). 원하면 "이 링크를 이메일로도 받기"만 추가.
 - **복구 정리**: 링크만 잃음 → 로그인된 기기에서 "다시 보기". 로그인된 기기가
   하나도 없으면 → **Excel 전체 백업**이 유일한 복구 수단(모든 모드 공통 안전망).
-- **동기화 대상**: Plan · KeywordItem · KeywordStatus · StatusColumn · Generator(My GPT
+- **동기화 대상**: Plan · KeywordItem · KeywordStatus · StatusColumn · Generator(내 생성 사이트
   이름·URL) · `defaultGenerationMode` · 일반 generation preference.
 - **동기화 제외 (기기 로컬 전용)**: **Direct Generate API Key**, 민감한 provider
   credential. `providerType` / `model` 은 동기화 가능하되 `apiKey` 는 제외 —
@@ -150,7 +150,7 @@ AppSetting    { key, value }   // 활성 계획, 목록 창, 빈 기간 목록, 
   `SyncRepository` 교체만으로 확장. `src/repo/types.ts` 헤더 참조.
 
 토큰 발급 / D1 / 서버 동기화 / API Key 서버 저장은 **별도 요청 전 구현 안 함.**
-V1은 ① 로컬 + My GPT 링크만. (회원가입·비밀번호·OAuth·이메일 발송 없음 — 위 ②로 확정.)
+V1은 ① 로컬 + 내 생성 사이트 링크만. (회원가입·비밀번호·OAuth·이메일 발송 없음 — 위 ②로 확정.)
 
 ## 계획 선택 · 브랜드 · 푸터
 
@@ -165,15 +165,15 @@ V1은 ① 로컬 + My GPT 링크만. (회원가입·비밀번호·OAuth·이메�
   진행바 그라데이션, 체크박스 `accent-color`. 과한 장식은 피함(생산성 도구).
 - **푸터**: 보라색 배경·흰색 가운데 정렬 바 — `© <연도> WOOJOO Stock Planner` +
   **사용법** / **데이터 처리 안내** 링크(각각 모달).
-- **사용법 모달** (`HelpModal`): 5단계 요약(키워드 확인 → 내 GPT 연결 → 진행 체크
-  → 달력 → 백업) + **GPTs 안내**(Plus 이상 생성·공유 불가, 지침 예시 인용) +
+- **사용법 모달** (`HelpModal`): 5단계 요약(키워드 확인 → 생성 사이트 연결 → 진행 체크
+  → 달력 → 백업) + **생성 사이트 이용 안내**(사이트별 로그인·요금, 지침 예시 인용) +
   **샘플 영상 자리**(680×926 `aspect-ratio` 박스, Canva 링크로 연결 — 나중에
   iframe 임베드로 교체 가능).
 - **데이터 처리 안내 모달**:
   - 로그인·서버 계정 없음. 모든 데이터는 이 브라우저(IndexedDB/localStorage)에만 저장.
   - 계획·키워드 데이터를 우리 서버로 전송·수집하지 않음.
-  - My GPT 링크도 브라우저에만(Direct Generate가 켜지면 API Key 안내 추가).
-    요청은 사용자가 지정한 GPT 주소로만.
+  - 내 생성 사이트 링크도 브라우저에만(Direct Generate가 켜지면 API Key 안내 추가).
+    링크 방식은 사이트 열기와 복사만 수행하며 프롬프트를 자동 전송하지 않음.
   - 삭제: 브라우저 사이트 데이터 삭제 또는 콘솔 `__wipeAllData()`(프로덕션 포함
     항상 노출 — 즉시 삭제 후 새로고침).
   - 현재는 개인정보 미수집이라 **이용약관·개인정보처리방침 페이지는 두지 않음**.
@@ -213,7 +213,7 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
 - 긴 키워드는 1줄 ellipsis(`white-space:nowrap; overflow:hidden; text-overflow:ellipsis`),
   전체 문자열은 `title`(hover)과 상세 모달에서 확인.
 - 키워드 클릭은 목록 보기와 **완전히 동일한 `onRun` 핸들러**를 재사용 (Direct 기본
-  → GenerateModal, My GPT 기본 → 복사 + GPT 탭). 생성 로직 복제 없음.
+  → GenerateModal, 내 생성 사이트 기본 → 복사 + GPT 탭). 생성 로직 복제 없음.
 - 모든 계획이 날짜 기반이라 항상 사용 가능. (`calendarAvailable = kind === 'date'`
   가드는 남아 있음 — weekly/monthly 재추가 시 자동 적용.)
 - 모바일(≤640px)은 7열을 억지로 줄이지 않고 **agenda 리스트**(키워드 있는 날만)로
@@ -278,32 +278,31 @@ Planner 상단 `[목록 보기] [달력 보기]` 토글(마지막 선택은 loca
   값은 `TRUE`/`FALSE`. 같은 날짜는 모든 행에 반복 기록(병합 없음).
   이 파일을 그대로 다시 Import하면 작업상태까지 복원된다(라운드트립 테스트 통과).
 
-## 생성 방식 — Direct Generate + My GPT
+## 생성 방식 — Direct Generate + 내 생성 사이트
 
 > **현재 Direct Generate는 기본 비활성(`VITE_DIRECT_GENERATION` 미설정)입니다.**
 > OpenAI·Gemini/Imagen 이미지 생성 API가 모두 유료(결제) 키를 요구해서 UI에서
-> 숨겨 두었습니다. 지금은 **My GPT만 동작**합니다. 되살리려면 `.env`(또는
+> 숨겨 두었습니다. 지금은 **내 생성 사이트만 동작**합니다. 되살리려면 `.env`(또는
 > Cloudflare Pages 환경변수)에 `VITE_DIRECT_GENERATION=true`.
 
 키워드 클릭 시 **Settings > 생성 > 기본 생성 방식**(`direct` | `my-gpt`)에 따라 동작:
 
-- **My GPT** (기본값, API 불필요): 프롬프트를 클립보드에 복사한다.
-  - **탭 재사용은 브라우저 한계로 불가**: ChatGPT는 `Cross-Origin-Opener-Policy:
-    same-origin`을 보내 페이지 로드 즉시 opener의 Window 참조와 명명 타깃 링크를
-    모두 끊는다. 그래서 열린 탭을 다시 focus하거나 재사용할 방법이 없다.
-  - **대응**: 세션당 **첫 클릭에서만** `window.open(url, 'woojoo-gpt')`으로 탭을
-    열고, 이후 클릭은 **복사만** 하고 Toast로 "ChatGPT 탭에 붙여넣기(Ctrl/⌘+V)"를
-    안내한다 → 새 탭이 계속 생기지 않는다.
-  - 툴바 **`GPT 열기`** 버튼(코랄)으로 필요할 때 탭을 다시 연다(`force`).
+- **내 생성 사이트** (기본값, API 불필요): 프롬프트를 클립보드에 복사한다.
+  - ChatGPT·Gemini·Midjourney 등 여러 사이트를 저장하고 기본 사이트를 선택한다.
+  - 키워드를 클릭할 때마다 기본 사이트를 **새 탭으로** 연다. 복사한 프롬프트를
+    사용자가 해당 사이트의 입력창에 직접 붙여넣는다.
+  - 툴바 **`생성 사이트 열기`** 버튼으로 기본 사이트만 열 수도 있다.
   - 자동 전송·자동 Enter·DOM 조작 없음. 열었다고 "생성"을 체크하지 않음.
-  - **URL 검증**(`src/lib/gptUrl.ts`): 저장 시 `https` + hostname `chatgpt.com`
-    (`www.` 허용)만 통과. `javascript:` / `data:` / http / 임의 외부 호스트 차단.
-    사용 직전에도 한 번 더 검증한다.
+  - **URL 검증**(`src/lib/gptUrl.ts`): HTTPS 주소를 허용하고 아이디·비밀번호가
+    포함된 주소 및 `javascript:` / `data:` / HTTP 주소를 차단한다.
+    사용 직전에도 검증하며 외부 탭의 opener를 해제한다.
+  - 링크 방식은 API Key가 필요 없으며 플래너에서 생성 API를 호출하지 않는다.
+    각 사이트의 로그인·이용 요금은 사용자가 해당 사이트에서 처리한다.
 - **Direct Generate** (개인 API 필요): 내부 Generator 모달 → 키워드를 프롬프트로
   즉시 생성 → 로딩 → 이미지 표시 → **성공 시에만 "생성" 자동 체크**. 실패 시 오류
-  메시지 + [다시 시도] / [My GPT로 열기], 체크 안 함.
+  메시지 + [다시 시도] / [생성 사이트로 열기], 체크 안 함.
 - **Fallback**: 기본이 Direct인데 사용 가능한 API가 없으면 모달에서 [API 설정] /
-  [My GPT로 열기](미등록 시 [My GPT 설정]) 제공.
+  [생성 사이트로 열기](미등록 시 [생성 사이트 설정]) 제공.
 
 **등록된 Provider** (`설정 > 생성 > Direct Generate`의 `API Provider`):
 
@@ -334,18 +333,18 @@ src/generation/
   GenerationContext.tsx  useGenerationConfig / store / service 훅
   components/
     GenerateModal.tsx        내부 Generator 패널 (needs-provider/generating/success/error)
-    GenerationSettings.tsx    기본 방식 + Direct 설정 (My GPT 설정은 기존 컴포넌트)
+    GenerationSettings.tsx    기본 방식 + Direct 설정 (생성 사이트 설정은 기존 컴포넌트)
   index.ts               앱이 닿는 유일한 barrel
 ```
 
 **켜기/끄기**: 기본은 **꺼짐**. `.env`(또는 배포 환경변수)에
 `VITE_DIRECT_GENERATION=true` → Direct UI 표시. 값이 없거나 `true`가 아니면 모든
-Direct UI 비표시, API Key 관련 안내 문구도 숨김, 키워드 클릭은 항상 My GPT.
+Direct UI 비표시, API Key 관련 안내 문구도 숨김, 키워드 클릭은 항상 내 생성 사이트.
 
 **완전 삭제**: ① `src/generation/` 삭제 ② `src/main.tsx`의 `<GenerationProvider>`
 래퍼 제거 ③ `src/App.tsx`·`src/components/settings/SettingsModal.tsx`의
 `directGenerationEnabled` 분기(각 파일 상단 import 포함) 제거. → WOOJOO Stock Planner +
-My GPT 정상 작동.
+내 생성 사이트 정상 작동.
 
 **보안**: 로컬 V1은 API Key 입력을 허용한다. Key는 이 브라우저 localStorage에만
 있고 앱 저장소와 분리돼 있다. **운영 배포 시 번들 하드코딩 금지**, 키 저장/프록시
@@ -371,9 +370,9 @@ CORS로 차단될 수 있으며, 그 경우 모달에 "서버 프록시가 필�
   **저장 · 백업 탭(Local 안내·Excel 백업, 동기화 옵션 없음)**, 검색, 상태 필터,
   Full Export 내용 검증(같은 날짜 2행), **Template 헤더(작업단계 열 + FALSE)**,
   **Full Export 재import → 개수 불변(더블 없음)**, Excel Import 미리보기/커밋,
-  My GPT 클릭마다 새 탭 + 복사·**GPT 열기 버튼**·
+  내 생성 사이트 클릭마다 새 탭 + 복사·**생성 사이트 열기 버튼**·
   **URL 검증**, Generator 미설정 경고,
-  Settings 생성 탭, Direct fallback 모달·My GPT 전환, Direct 성공(목킹) → 이미지 +
+  Settings 생성 탭, Direct fallback 모달·내 생성 사이트 전환, Direct 성공(목킹) → 이미지 +
   "생성" 자동 체크 + 영속, Direct 실패 → 체크 안 함, 모바일 가로 오버플로 없음,
   **Calendar**: 7열 grid + 과거 ○/×, 오늘/미래는 미체크 시 마크 없음·체크 시 즉시 ○,
   긴 키워드 ellipsis+title,

@@ -6,7 +6,7 @@ import { useUiStore } from '../../store/uiStore'
 import { isAllowedGptUrl, GPT_URL_HINT } from '../../lib/gptUrl'
 
 /**
- * Generator = a saved GPT / GPTs link (principle 20). Multiple are supported;
+ * Generator = a saved generation website link. Multiple are supported;
  * one is the default used when a keyword is clicked. The app never claims to
  * auto-send a prompt — it copies text and opens this URL in a new tab.
  */
@@ -29,7 +29,7 @@ export function GeneratorsSettings() {
     await repo.createGenerator({ name, url: url.trim() })
     setName('')
     setUrl('')
-    showToast('My GPT를 추가했습니다.')
+    showToast('생성 사이트를 추가했습니다.')
   }
 
   const list = generators ?? []
@@ -38,7 +38,7 @@ export function GeneratorsSettings() {
     <div className="gen-settings">
       {list.length === 0 && (
         <p className="hint">
-          아직 저장된 Generator가 없습니다. 사용하는 GPT / GPTs 링크를 추가하세요.
+          아직 저장된 생성 사이트가 없습니다. 사용하는 사이트 링크를 추가하세요.
         </p>
       )}
 
@@ -49,19 +49,22 @@ export function GeneratorsSettings() {
       </ul>
 
       <div className="gen-add">
-        <div className="gen-add-title">새 Generator</div>
-        <label className="field-label">Generator Name</label>
+        <div className="gen-add-title">생성 사이트 추가</div>
+        <p className="hint">ChatGPT·Gemini·Midjourney 등 원하는 사이트의 HTTPS 주소를 등록하세요.</p>
+        <label className="field-label" htmlFor="generator-name">사이트 이름</label>
         <input
+          id="generator-name"
           className="field-input"
           value={name}
-          placeholder="예: My Stock Image GPT"
+          placeholder="예: Gemini, Midjourney, 내 이미지 GPT"
           onChange={(e) => setName(e.target.value)}
         />
-        <label className="field-label">GPT / GPTs URL</label>
+        <label className="field-label" htmlFor="generator-url">사이트 주소</label>
         <input
+          id="generator-url"
           className="field-input"
           value={url}
-          placeholder="https://chatgpt.com/g/..."
+          placeholder="https://gemini.google.com/app"
           onChange={(e) => setUrl(e.target.value)}
         />
         {!urlValid && <p className="hint hint-error">{GPT_URL_HINT}</p>}
@@ -108,11 +111,13 @@ function GeneratorRow({ generator }: { generator: Generator }) {
       <div className="gen-fields">
         <input
           className="field-input"
+          aria-label="생성 사이트 이름"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <input
           className="field-input"
+          aria-label="생성 사이트 주소"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />

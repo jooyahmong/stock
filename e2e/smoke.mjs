@@ -13,7 +13,7 @@ const GPT_URL = 'https://chatgpt.com/g/g-smoke-test'
 const results = []
 let browser
 
-/** Serve chatgpt.com from a local stub so My GPT tests stay offline & instant. */
+/** Serve chatgpt.com from a local stub so 내 생성 사이트 tests stay offline & instant. */
 async function stubChatgpt(context) {
   await context.route('**://chatgpt.com/**', (route) =>
     route.fulfill({
@@ -425,7 +425,7 @@ const run = async () => {
   await test('keyword click copies text and opens the configured GPT URL', async (page, context) => {
     await stubChatgpt(context)
     await boot(page)
-    // configure a My GPT generator
+    // configure a 내 생성 사이트 generator
     await page.getByRole('button', { name: '⚙ 설정' }).click()
     await page.locator('.gen-add input.field-input').first().fill('Test GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
@@ -443,7 +443,7 @@ const run = async () => {
       throw new Error('opened wrong url: ' + popup.url())
   })
 
-  await test('My GPT: 키워드 클릭마다 GPT URL 새 탭 + 프롬프트 복사', async (page, context) => {
+  await test('내 생성 사이트: 키워드 클릭마다 GPT URL 새 탭 + 프롬프트 복사', async (page, context) => {
     await stubChatgpt(context)
     await boot(page)
     await page.getByRole('button', { name: '⚙ 설정' }).click()
@@ -474,13 +474,13 @@ const run = async () => {
     if (gptTabs.length !== 2)
       throw new Error(`expected 2 chatgpt.com tabs, got ${gptTabs.length}`)
 
-    // "GPT 열기" also opens the URL
-    await page.getByRole('button', { name: 'GPT 열기' }).click()
+    // "생성 사이트 열기" also opens the URL
+    await page.getByRole('button', { name: '생성 사이트 열기' }).click()
     await page.waitForTimeout(500)
-    if (opened !== 3) throw new Error('"GPT 열기" should open a tab')
+    if (opened !== 3) throw new Error('"생성 사이트 열기" should open a tab')
   })
 
-  await test('My GPT URL 검증: chatgpt.com https 링크만 저장 허용', async (page) => {
+  await test('생성 사이트 URL 검증: HTTPS 사이트 허용, 프로토콜·자격증명 차단', async (page) => {
     await boot(page)
     await page.getByRole('button', { name: '⚙ 설정' }).click()
     const nameInput = page.locator('.gen-add input.field-input').first()
@@ -488,9 +488,9 @@ const run = async () => {
     const addBtn = page.locator('.gen-add').getByRole('button', { name: '추가' })
 
     await nameInput.fill('Bad')
-    await urlInput.fill('https://evil.example.com/g/x')
+    await urlInput.fill('https://user:password@gemini.google.com/app')
     await page.locator('.gen-add .hint-error').waitFor()
-    if (!(await addBtn.isDisabled())) throw new Error('non-chatgpt URL must not be saveable')
+    if (!(await addBtn.isDisabled())) throw new Error('credentials in URL must not be saveable')
 
     await urlInput.fill('javascript:alert(1)')
     if (!(await addBtn.isDisabled())) throw new Error('javascript: URL must not be saveable')
@@ -501,15 +501,23 @@ const run = async () => {
     await urlInput.fill('https://chatgpt.com/g/g-ok')
     await addBtn.click()
     await page.locator('.gen-row').waitFor()
+    await nameInput.fill('Gemini')
+    await urlInput.fill('https://gemini.google.com/app')
+    await addBtn.click()
+    await page.locator('.gen-row').nth(1).waitFor()
+    await nameInput.fill('Midjourney')
+    await urlInput.fill('https://www.midjourney.com/imagine')
+    await addBtn.click()
+    await page.locator('.gen-row').nth(2).waitFor()
   })
 
   await test('keyword click with no generator warns instead of opening', async (page) => {
     await boot(page)
     await page.getByRole('button', { name: SEED_A, exact: true }).click()
-    await page.getByText('GPT URL을 먼저 저장').waitFor()
+    await page.getByText('생성 사이트 주소를 먼저 저장').waitFor()
   })
 
-  // ---- Generation: Direct Generate + My GPT --------------------------------
+  // ---- Generation: Direct Generate + 내 생성 사이트 --------------------------------
 
   const TINY_PNG =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
@@ -524,7 +532,7 @@ const run = async () => {
         .check()
     } else if (mode === 'my-gpt') {
       await page
-        .locator('.gs-radio', { hasText: 'My GPT' })
+        .locator('.gs-radio', { hasText: '내 생성 사이트' })
         .first()
         .locator('input')
         .check()
@@ -536,23 +544,23 @@ const run = async () => {
     await openGenerationTab(page)
     await page.getByText('기본 생성 방식').waitFor()
     await page.locator('.gs-radio', { hasText: 'Direct Generate' }).waitFor()
-    await page.locator('.gs-radio', { hasText: 'My GPT' }).first().waitFor()
-    // default = my-gpt → My GPT 설정만, Direct 상세는 숨김
-    await page.getByRole('heading', { name: 'My GPT' }).waitFor()
+    await page.locator('.gs-radio', { hasText: '내 생성 사이트' }).first().waitFor()
+    // default = my-gpt → 생성 사이트 설정만, Direct 상세는 숨김
+    await page.getByRole('heading', { name: '내 생성 사이트' }).waitFor()
     if (await page.getByRole('button', { name: 'Test Connection' }).count())
       throw new Error('Direct 상세가 my-gpt 모드에서 보임')
-    // Direct 선택 → Direct 상세만, My GPT 숨김
+    // Direct 선택 → Direct 상세만, 내 생성 사이트 숨김
     await page
       .locator('.gs-radio', { hasText: 'Direct Generate' })
       .locator('input')
       .check()
     await page.getByText('API Key', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Test Connection' }).waitFor()
-    if (await page.getByRole('heading', { name: 'My GPT' }).count())
-      throw new Error('My GPT 설정이 direct 모드에서 보임')
+    if (await page.getByRole('heading', { name: '내 생성 사이트' }).count())
+      throw new Error('생성 사이트 설정이 direct 모드에서 보임')
   })
 
-  await testIf(DIRECT_ON, '기본=Direct + provider 없음 -> fallback 모달 (API 설정 / My GPT)', async (page) => {
+  await testIf(DIRECT_ON, '기본=Direct + provider 없음 -> fallback 모달 (API 설정 / 내 생성 사이트)', async (page) => {
     await boot(page)
     await openGenerationTab(page)
     await page
@@ -563,15 +571,15 @@ const run = async () => {
     await page.getByRole('button', { name: SEED_A, exact: true }).click()
     await page.getByText('API를 먼저 연결하세요').waitFor()
     await page.getByRole('button', { name: 'API 설정' }).waitFor()
-    // My GPT 미등록 -> "My GPT 설정" 안내 버튼
-    await page.getByRole('button', { name: 'My GPT 설정' }).waitFor()
+    // 내 생성 사이트 미등록 -> "생성 사이트 설정" 안내 버튼
+    await page.getByRole('button', { name: '생성 사이트 설정' }).waitFor()
   })
 
-  await testIf(DIRECT_ON, '기본=Direct + provider 없음 + My GPT 등록됨 -> My GPT로 열기 동작', async (page, context) => {
+  await testIf(DIRECT_ON, '기본=Direct + provider 없음 + 내 생성 사이트 등록됨 -> 생성 사이트로 열기 동작', async (page, context) => {
     await stubChatgpt(context)
     await boot(page)
     await openGenerationTab(page)
-    // register My GPT
+    // register 내 생성 사이트
     await page.locator('.gen-add input.field-input').first().fill('T GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
     await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
@@ -584,10 +592,10 @@ const run = async () => {
 
     const popupPromise = context.waitForEvent("page", { timeout: 12000 }).catch(() => null)
     await page.getByRole('button', { name: SEED_A, exact: true }).click()
-    await page.getByRole('button', { name: 'My GPT로 열기' }).click()
+    await page.getByRole('button', { name: '생성 사이트로 열기' }).click()
     const popup = await popupPromise
     if (!popup || !popup.url().startsWith('https://chatgpt.com/'))
-      throw new Error('My GPT fallback did not open the tab: ' + (popup && popup.url()))
+      throw new Error('내 생성 사이트 fallback did not open the tab: ' + (popup && popup.url()))
     const clip = await page.evaluate(() => navigator.clipboard.readText())
     if (clip !== SEED_A) throw new Error('clipboard = ' + JSON.stringify(clip))
   })
@@ -812,7 +820,7 @@ const run = async () => {
     await stubChatgpt(context)
     await boot(page)
     await newPlan(page, 'Cal Test 4')
-    // My GPT so keyword click has a handler
+    // 내 생성 사이트 so keyword click has a handler
     await page.getByRole('button', { name: '⚙ 설정' }).click()
     await page.locator('.gen-add input.field-input').first().fill('T GPT')
     await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)

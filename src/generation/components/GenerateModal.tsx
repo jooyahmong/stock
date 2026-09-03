@@ -112,7 +112,7 @@ export function GenerateModal({
                 className="btn"
                 onClick={() => onSwitchToMyGpt(keyword)}
               >
-                My GPT로 열기
+                생성 사이트로 열기
               </button>
             )}
             <button className="btn btn-primary" onClick={run}>
@@ -137,7 +137,7 @@ export function GenerateModal({
             </button>
             {hasMyGpt ? (
               <button className="btn" onClick={() => onSwitchToMyGpt(keyword)}>
-                My GPT로 열기
+                생성 사이트로 열기
               </button>
             ) : (
               <button
@@ -146,9 +146,9 @@ export function GenerateModal({
                   onClose()
                   onOpenSettings()
                 }}
-                title="My GPT도 등록되어 있지 않습니다"
+                title="생성 사이트가 등록되어 있지 않습니다"
               >
-                My GPT 설정
+                생성 사이트 설정
               </button>
             )}
           </div>

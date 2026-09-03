@@ -27,18 +27,21 @@ export async function copyText(text: string): Promise<boolean> {
 export type OpenResult = 'opened' | 'popup-blocked'
 
 /**
- * Open the My GPT URL in a NEW tab, every time.
- *
- * (Reliable reuse of an existing ChatGPT tab isn't possible — it sends
- * `Cross-Origin-Opener-Policy: same-origin`, which severs the opener link on
- * load. Since only a handful of keyword clicks happen per day, a fresh tab per
- * click is fine for now; this can be revisited later.)
+ * Open the selected generation website in a new tab. Detach the opener before
+ * navigating so an external site cannot navigate the planner through it.
  *
  * `url` must already be validated (see lib/gptUrl.ts).
  */
 export function openGptWindow(url: string): OpenResult {
-  const win = window.open(url, '_blank')
+  const win = window.open('about:blank', '_blank')
   if (!win) return 'popup-blocked'
+  try {
+    win.opener = null
+    win.location.replace(url)
+  } catch {
+    win.close()
+    return 'popup-blocked'
+  }
   try {
     win.focus()
   } catch {
