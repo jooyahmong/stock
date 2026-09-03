@@ -1326,6 +1326,23 @@ input[type='radio'] {
 .style-editor {
   margin-bottom: 12px;
 }
+.style-field-row {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  margin-top: 10px;
+}
+.style-controls > .style-field-row:first-child {
+  margin-top: 0;
+}
+.style-field-row .field-label {
+  margin: 0;
+  padding-top: 10px;
+}
+.style-field-row .field-input {
+  min-width: 0;
+}
 .style-editor textarea {
   resize: vertical;
   min-height: 100px;

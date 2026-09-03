@@ -36,12 +36,14 @@ export function ImageStylesSettings() {
         붙여넣고 전송하세요. 스타일 이름과 지시문을 자유롭게 수정할 수 있습니다.
       </p>
       <fieldset className="style-controls" disabled={pending}>
-        <label className="field-label" htmlFor="image-style-select">사용할 그림 스타일</label>
-        <select id="image-style-select" className="field-input" value={settings.selectedId ?? ''}
-          onChange={(e) => void persist({ ...settings, selectedId: e.target.value || null }, '그림 스타일을 선택했습니다.')}>
-          {settings.styles.map((style) => <option key={style.id} value={style.id}>{style.name}</option>)}
-          <option value="">스타일 없이 키워드만 복사</option>
-        </select>
+        <div className="style-field-row">
+          <label className="field-label" htmlFor="image-style-select">사용할 그림 스타일</label>
+          <select id="image-style-select" className="field-input" value={settings.selectedId ?? ''}
+            onChange={(e) => void persist({ ...settings, selectedId: e.target.value || null }, '그림 스타일을 선택했습니다.')}>
+            {settings.styles.map((style) => <option key={style.id} value={style.id}>{style.name}</option>)}
+            <option value="">스타일 없이 키워드만 복사</option>
+          </select>
+        </div>
         {!adding && selected && (
           <StyleEditor key={`${selected.id}:${selected.name}:${selected.prompt}`} style={selected}
             onSave={(name, prompt) => persist({ ...settings, styles: settings.styles.map((style) => style.id === selected.id ? { ...style, name, prompt } : style) }, '그림 스타일을 저장했습니다.')}
@@ -73,14 +75,18 @@ function StyleEditor({ style, onSave, onDelete, onCancel }: {
   const dirty = name !== (style?.name ?? '') || prompt !== (style?.prompt ?? '')
   return (
     <div className="style-editor">
-      <label className="field-label" htmlFor="image-style-name">스타일 이름</label>
-      <input id="image-style-name" className="field-input" value={name} placeholder="예: 따뜻한 파스텔 일러스트"
-        onChange={(e) => setName(e.target.value)} />
-      <label className="field-label" htmlFor="image-style-prompt">스타일 지시문</label>
-      <textarea id="image-style-prompt" className="field-input" rows={4} value={prompt}
-        placeholder="예: 2D 플랫 일러스트 스타일의 그림을 그려줘. 흰 배경으로 실제 이미지를 생성해줘."
-        onChange={(e) => setPrompt(e.target.value)} />
-      <p className="hint">주제 키워드는 앞에 자동으로 붙습니다. 수정한 내용은 ‘스타일 저장’을 눌러 적용하세요.</p>
+      <div className="style-field-row">
+        <label className="field-label" htmlFor="image-style-name">스타일 이름</label>
+        <input id="image-style-name" className="field-input" value={name} placeholder="예: 따뜻한 파스텔 일러스트"
+          onChange={(e) => setName(e.target.value)} />
+      </div>
+      <div className="style-field-row">
+        <label className="field-label" htmlFor="image-style-prompt">스타일 지시문</label>
+        <textarea id="image-style-prompt" className="field-input" rows={4} value={prompt}
+          placeholder="예: 2D 플랫 일러스트 스타일의 그림을 그려줘. 흰 배경으로 실제 이미지를 생성해줘."
+          onChange={(e) => setPrompt(e.target.value)} />
+      </div>
+      <p className="hint">클릭한 주제 키워드는 앞에 자동으로 붙습니다. 수정한 내용은 ‘스타일 저장’을 눌러 적용하세요.</p>
       <div className="gs-actions">
         <button className="btn btn-primary btn-sm" disabled={!name.trim() || !prompt.trim() || !dirty}
           onClick={() => void onSave(name.trim(), prompt.trim())}>{style ? '스타일 저장' : '스타일 추가하고 선택'}</button>
