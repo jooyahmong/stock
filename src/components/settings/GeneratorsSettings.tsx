@@ -70,15 +70,15 @@ export function GeneratorsSettings() {
             placeholder="https://gemini.google.com/app"
             onChange={(e) => setUrl(e.target.value)}
           />
+          <button
+            className="btn btn-primary gen-add-submit"
+            onClick={add}
+            disabled={!name.trim() || !url.trim() || !isAllowedGptUrl(url)}
+          >
+            추가
+          </button>
         </div>
         {!urlValid && <p className="hint hint-error">{GPT_URL_HINT}</p>}
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={add}
-          disabled={!name.trim() || !url.trim() || !isAllowedGptUrl(url)}
-        >
-          추가
-        </button>
       </div>
     </div>
   )

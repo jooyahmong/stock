@@ -944,7 +944,7 @@ input[type='radio'] {
 }
 .gen-add-fields {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) clamp(60px, 12vw, 80px);
   align-items: center;
   gap: 8px 12px;
   margin-top: 12px;
@@ -955,8 +955,10 @@ input[type='radio'] {
 .gen-add-fields .field-input {
   min-width: 0;
 }
-.gen-add > .btn {
-  margin-top: 15px;
+.gen-add-submit {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: stretch;
 }
 .excel-settings {
   display: flex;
