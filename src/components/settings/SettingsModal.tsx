@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Plan, PlanSnapshot } from '../../repo/types'
 import { Modal } from '../Modal'
-import { periodKind, periodColumnLabel } from '../../domain/periods'
 import { GeneratorsSettings } from './GeneratorsSettings'
 import { ImageStylesSettings } from './ImageStylesSettings'
 import { StatusColumnsSettings } from './StatusColumnsSettings'
@@ -154,23 +153,25 @@ export function SettingsModal({
             <section className="gs-block">
               <h4>Excel 백업</h4>
               <div className="storage-actions">
-                <button className="btn btn-primary" onClick={onFullExport}>
-                  Excel 전체 백업
-                </button>
-                <button className="btn" onClick={onOpenImport}>
-                  Excel 가져오기 (복원)
-                </button>
-                <button className="btn" onClick={onDownloadTemplate}>
-                  템플릿 내려받기
-                </button>
+                <div className="storage-action">
+                  <button className="btn btn-primary" onClick={onFullExport} aria-describedby="backup-export-help">
+                    Excel 전체 백업
+                  </button>
+                  <p id="backup-export-help">현재 계획의 모든 키워드와 체크 상태를 Excel로 저장합니다. 지난 날짜도 포함됩니다.</p>
+                </div>
+                <div className="storage-action">
+                  <button className="btn" onClick={onOpenImport} aria-describedby="backup-import-help">
+                    Excel 가져오기 (복원)
+                  </button>
+                  <p id="backup-import-help">Excel 파일을 현재 계획으로 불러옵니다. 같은 날짜·키워드는 파일의 체크 상태로 덮어씁니다.</p>
+                </div>
+                <div className="storage-action">
+                  <button className="btn" onClick={onDownloadTemplate} aria-describedby="backup-template-help">
+                    템플릿 내려받기
+                  </button>
+                  <p id="backup-template-help">키워드를 직접 작성할 Excel 양식을 받습니다. 작성한 파일은 ‘Excel 가져오기’로 등록하세요.</p>
+                </div>
               </div>
-              <p className="hint">
-                파일 열은 <b>{periodColumnLabel(periodKind(plan.type))} · Keyword ·
-                생성 · 미캔 · 사용자 정의 체크 항목</b>으로 템플릿·백업이 같은
-                구조입니다. 같은 날짜는 병합 없이 각 행에 반복되며, 가져오기 시
-                같은 날짜+Keyword는 기존 항목의 체크값을 그대로 덮어씁니다(중복
-                생성 안 함).
-              </p>
             </section>
 
             {directGenerationEnabled && (

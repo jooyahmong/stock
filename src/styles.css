@@ -1329,10 +1329,38 @@ input[type='radio'] {
   opacity: 0.55;
 }
 .storage-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 4px 0 8px;
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.storage-action {
+  display: grid;
+  grid-template-columns: 166px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+}
+.storage-action .btn {
+  font-size: 13px;
+  min-height: 38px;
+}
+.storage-action p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .storage-action {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .storage-action .btn { justify-self: start; }
 }
 .gs-test-result {
   margin-top: 8px;
