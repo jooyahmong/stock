@@ -73,7 +73,8 @@ button {
 }
 
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: var(--text);
 }
@@ -84,6 +85,16 @@ input[type='radio'] {
 }
 ::selection {
   background: var(--accent-soft);
+}
+
+.past-dates {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-strong);
+}
+.past-dates-title {
+  font-size: 14px;
+  color: var(--text-soft);
 }
 
 /* ---------- layout ---------- */
@@ -1223,5 +1234,15 @@ input[type='radio'] {
   }
   .pg-progress {
     display: none;
+  }
+}
+
+/* Keep focused fields readable without triggering mobile browser auto-zoom.
+   The viewport still permits pinch zoom for accessibility. */
+@media (max-width: 900px), (pointer: coarse) {
+  .app input:not([type='checkbox']):not([type='radio']),
+  .app select,
+  .app textarea {
+    font-size: 16px;
   }
 }

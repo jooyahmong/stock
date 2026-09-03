@@ -27,6 +27,7 @@ import { PeriodGroup } from './components/PeriodGroup'
 import { CalendarView } from './components/calendar/CalendarView'
 import {
   DEFAULT_LIST_WINDOW,
+  getListView,
   type ListWindowState,
 } from './components/ListWindow'
 import { PromptDialog } from './components/PromptDialog'
@@ -130,6 +131,18 @@ export default function App() {
   }, [])
   const [listWindow, setListWindow] = useState<ListWindowState>(DEFAULT_LIST_WINDOW)
   useEffect(() => setListWindow(DEFAULT_LIST_WINDOW), [activePlanId])
+  const [today, setToday] = useState(() => currentPeriod('date'))
+  useEffect(() => {
+    const refresh = () => setToday(currentPeriod('date'))
+    const timer = window.setInterval(refresh, 30_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [])
 
   const kind = activePlan ? periodKind(activePlan.type) : 'date'
   const calendarAvailable = kind === 'date'
@@ -147,35 +160,24 @@ export default function App() {
     })
   }, [snapshot, extraPeriods, kind, search, filter])
 
-  // List-view windowing: a full-year plan is too long, so show a slice around
-  // "today" with expand controls. Bypassed while searching / filtering.
-  const listView = useMemo(() => {
-    const groups = grouping?.groups ?? []
-    const canWindow =
-      !!grouping &&
-      !grouping.filtering &&
-      groups.length > listWindow.before + listWindow.after
-    if (!canWindow) return { visible: groups, windowed: false, atEnd: true }
-    if (listWindow.all) return { visible: groups, windowed: true, atEnd: true }
-
-    const anchor = currentPeriod(kind)
-    let startIdx = groups.findIndex((g) => g.period >= anchor)
-    if (startIdx === -1) startIdx = groups.length
-    const lo = Math.max(0, startIdx - listWindow.before)
-    const hi = Math.min(groups.length, startIdx + listWindow.after)
-    return {
-      visible: groups.slice(lo, hi),
-      windowed: true,
-      atEnd: hi >= groups.length,
-    }
-  }, [grouping, listWindow, kind])
+  // Keep today first; past work stays available separately, including in search.
+  const listView = useMemo(
+    () => getListView(
+      grouping?.groups ?? [],
+      kind === 'date' ? today : currentPeriod(kind),
+      listWindow,
+      grouping?.filtering ?? false,
+    ),
+    [grouping, listWindow, kind, today],
+  )
 
   // "전체 선택" targets the keywords currently on screen (list window +
   // search/filter), never hidden ones.
   const selection = useUiStore((s) => s.selection)
   const selectMany = useUiStore((s) => s.selectMany)
   const visibleKeywordIds = useMemo(
-    () => listView.visible.flatMap((g) => g.items.map((i) => i.id)),
+    () => [...listView.visible, ...(listView.showPast ? listView.past : [])]
+      .flatMap((g) => g.items.map((i) => i.id)),
     [listView],
   )
   const allVisibleSelected =
@@ -222,6 +224,9 @@ export default function App() {
     const list = new Set(extraPeriods ?? [])
     list.add(raw.trim())
     await repo.setSetting(EXTRA_PERIODS_KEY(activePlanId), [...list])
+    if (raw.trim() < currentPeriod(kind)) {
+      setListWindow((w) => ({ ...w, past: true }))
+    }
     setAddingPeriod(false)
   }
 
@@ -323,6 +328,9 @@ export default function App() {
                     onEditPeriod={setEditingPeriod}
                   />
                 ))}
+                {!grouping.filtering && listView.visible.length === 0 && listView.past.length > 0 && (
+                  <p className="empty-state">오늘 이후의 일정이 없습니다. 지난 날짜를 펼쳐 작업을 확인하세요.</p>
+                )}
                 {listView.windowed && !listWindow.all && !listView.atEnd && (
                   <button
                     className="list-more-btn"
@@ -343,9 +351,37 @@ export default function App() {
                     }
                   >
                     {listWindow.all
-                      ? '최근 날짜만 보기'
+                      ? '오늘부터 보기'
                       : `전체 ${grouping.groups.length}일 보기`}
                   </button>
+                )}
+                {listView.past.length > 0 && (
+                  <section className="past-dates" aria-label="지난 날짜">
+                    {grouping.filtering || listWindow.all ? (
+                      <h2 className="past-dates-title">지난 날짜 · {listView.past.length}일</h2>
+                    ) : (
+                      <button
+                        className="list-all-toggle"
+                        aria-expanded={listView.showPast}
+                        aria-controls="past-date-groups"
+                        onClick={() => setListWindow((w) => ({ ...w, past: !w.past }))}
+                      >
+                        지난 날짜 {listView.showPast ? '접기' : '보기'} · {listView.past.length}일
+                      </button>
+                    )}
+                    <div id="past-date-groups">
+                      {listView.showPast && listView.past.map((g) => (
+                        <PeriodGroup
+                          key={g.period}
+                          group={g}
+                          statusColumns={snapshot.statusColumns.filter((c) => c.isVisible)}
+                          statusMap={snapshot.statusMap}
+                          onRun={onRun}
+                          onEditPeriod={setEditingPeriod}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 )}
               </main>
             </>

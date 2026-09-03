@@ -177,7 +177,7 @@ const run = async () => {
     if ((await page.locator('.period-group').count()) !== 365)
       throw new Error('전체 보기 should show all 365 groups')
 
-    await page.getByRole('button', { name: '최근 날짜만 보기' }).click()
+    await page.getByRole('button', { name: '오늘부터 보기' }).click()
     await page.waitForTimeout(300)
     if ((await page.locator('.period-group').count()) > 40)
       throw new Error('접기 should return to the windowed slice')
