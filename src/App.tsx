@@ -25,6 +25,8 @@ import { SelectionBar } from './components/SelectionBar'
 import { ProgressPanel } from './components/ProgressPanel'
 import { PeriodGroup } from './components/PeriodGroup'
 import { CalendarView } from './components/calendar/CalendarView'
+import { FIRST_AVAILABLE_MONTH, MonthNavigator } from './components/calendar/MonthNavigator'
+import { currentMonth } from './domain/calendar'
 import {
   DEFAULT_LIST_WINDOW,
   getListView,
@@ -125,6 +127,10 @@ export default function App() {
     null,
   )
   const [viewMode, setViewModeState] = useState<ViewMode>(readViewMode)
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const month = currentMonth()
+    return month < FIRST_AVAILABLE_MONTH ? FIRST_AVAILABLE_MONTH : month
+  })
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeState(mode)
     writeViewMode(mode)
@@ -160,16 +166,23 @@ export default function App() {
     })
   }, [snapshot, extraPeriods, kind, search, filter])
 
-  // Date plans show upcoming work in the list; past work remains in the calendar.
+  const listGroups = useMemo(
+    () => kind === 'date'
+      ? (grouping?.groups ?? []).filter((group) => group.period.startsWith(`${selectedMonth}-`))
+      : (grouping?.groups ?? []),
+    [grouping, kind, selectedMonth],
+  )
+
+  // Date-plan lists follow the selected month and keep its past dates at the bottom.
   const listView = useMemo(
     () => getListView(
-      grouping?.groups ?? [],
+      listGroups,
       kind === 'date' ? today : currentPeriod(kind),
       listWindow,
       grouping?.filtering ?? false,
-      kind !== 'date',
+      true,
     ),
-    [grouping, listWindow, kind, today],
+    [grouping?.filtering, listGroups, listWindow, kind, today],
   )
 
   // "전체 선택" targets the keywords currently on screen (list window +
@@ -177,9 +190,9 @@ export default function App() {
   const selection = useUiStore((s) => s.selection)
   const selectMany = useUiStore((s) => s.selectMany)
   const visibleKeywordIds = useMemo(
-    () => [...listView.visible, ...(listView.showPast ? listView.past : [])]
+    () => [...listView.visible, ...((calendarAvailable || listView.showPast) ? listView.past : [])]
       .flatMap((g) => g.items.map((i) => i.id)),
-    [listView],
+    [calendarAvailable, listView],
   )
   const allVisibleSelected =
     visibleKeywordIds.length > 0 &&
@@ -298,9 +311,12 @@ export default function App() {
               dateBased={calendarAvailable}
               onRun={onRun}
               onSwitchToList={() => setViewMode('list')}
+              month={selectedMonth}
+              onMonthChange={setSelectedMonth}
             />
           ) : (
             <>
+              {calendarAvailable && <MonthNavigator month={selectedMonth} onChange={setSelectedMonth} />}
               <Toolbar
                 snapshot={snapshot}
                 visibleCount={visibleKeywordIds.length}
@@ -314,7 +330,7 @@ export default function App() {
               <ProgressPanel snapshot={snapshot} />
 
               <main className="groups">
-                {grouping.groups.length === 0 && (
+                {listView.upcomingCount === 0 && listView.past.length === 0 && (
                   <p className="empty-state">
                     {grouping.filtering
                       ? '조건에 맞는 키워드가 없습니다.'
@@ -331,7 +347,7 @@ export default function App() {
                     onEditPeriod={setEditingPeriod}
                   />
                 ))}
-                {listView.visible.length === 0 && listView.hasPast && (
+                {!calendarAvailable && listView.visible.length === 0 && listView.hasPast && (
                   <p className="empty-state">
                     {calendarAvailable ? (
                       <>
@@ -367,7 +383,7 @@ export default function App() {
                 )}
                 {listView.past.length > 0 && (
                   <section className="past-dates" aria-label="지난 날짜">
-                    {grouping.filtering || listWindow.all ? (
+                    {calendarAvailable || grouping.filtering || listWindow.all ? (
                       <h2 className="past-dates-title">지난 날짜 · {listView.past.length}일</h2>
                     ) : (
                       <button
@@ -380,7 +396,7 @@ export default function App() {
                       </button>
                     )}
                     <div id="past-date-groups">
-                      {listView.showPast && listView.past.map((g) => (
+                      {(calendarAvailable || listView.showPast) && listView.past.map((g) => (
                         <PeriodGroup
                           key={g.period}
                           group={g}

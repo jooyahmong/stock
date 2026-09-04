@@ -3,11 +3,7 @@ import type { KeywordItem, StatusColumn } from '../../repo/types'
 import { findGeneratedColumn } from '../../domain/statusColumns'
 import {
   buildMonthGrid,
-  currentMonth,
-  earliestDateMonth,
-  formatMonthTitle,
   keywordsByDay,
-  shiftMonth,
   todayIso,
   WEEKDAY_LABELS,
 } from '../../domain/calendar'
@@ -15,6 +11,7 @@ import { useIsNarrow } from '../../lib/useMediaQuery'
 import { CalendarDayCell } from './CalendarDayCell'
 import { DayKeywordsModal } from './DayKeywordsModal'
 import { MobileCalendarDayCell } from './MobileCalendarDayCell'
+import { MonthNavigator } from './MonthNavigator'
 
 const MOBILE_WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -30,6 +27,8 @@ export function CalendarView({
   dateBased,
   onRun,
   onSwitchToList,
+  month,
+  onMonthChange,
 }: {
   keywords: KeywordItem[]
   statusColumns: StatusColumn[]
@@ -37,6 +36,8 @@ export function CalendarView({
   dateBased: boolean
   onRun: (keyword: string, keywordItemId: string) => void
   onSwitchToList: () => void
+  month: string
+  onMonthChange: (month: string) => void
 }) {
   if (!dateBased) {
     return (
@@ -56,6 +57,8 @@ export function CalendarView({
       statusColumns={statusColumns}
       statusMap={statusMap}
       onRun={onRun}
+      month={month}
+      onMonthChange={onMonthChange}
     />
   )
 }
@@ -65,20 +68,19 @@ function CalendarBody({
   statusColumns,
   statusMap,
   onRun,
+  month,
+  onMonthChange,
 }: {
   keywords: KeywordItem[]
   statusColumns: StatusColumn[]
   statusMap: Record<string, boolean>
   onRun: (keyword: string, keywordItemId: string) => void
+  month: string
+  onMonthChange: (month: string) => void
 }) {
   const today = todayIso()
   const narrow = useIsNarrow()
 
-  const [month, setMonth] = useState(() => {
-    const cur = currentMonth()
-    if (keywordsByDay(keywords, cur).size > 0) return cur
-    return earliestDateMonth(keywords) ?? cur
-  })
   const [detailDay, setDetailDay] = useState<string | null>(null)
 
   const genCol = useMemo(
@@ -97,29 +99,7 @@ function CalendarBody({
 
   return (
     <div className="calendar">
-      <div className="cal-head">
-        <button
-          className="icon-btn"
-          aria-label="이전 달"
-          onClick={() => setMonth((m) => shiftMonth(m, -1))}
-        >
-          ‹
-        </button>
-        <strong className="cal-title">{formatMonthTitle(month)}</strong>
-        <button
-          className="icon-btn"
-          aria-label="다음 달"
-          onClick={() => setMonth((m) => shiftMonth(m, 1))}
-        >
-          ›
-        </button>
-        <button
-          className="btn btn-xs"
-          onClick={() => setMonth(currentMonth())}
-        >
-          오늘
-        </button>
-      </div>
+      <MonthNavigator month={month} onChange={onMonthChange} />
 
       {narrow ? (
         <div className="mobile-cal-grid" role="grid">
