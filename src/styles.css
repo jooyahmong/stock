@@ -894,6 +894,46 @@ input[type='radio'] {
   flex-direction: column;
   gap: 10px;
 }
+.gen-section-title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+.gen-section-hint {
+  margin: 4px 0 10px;
+}
+.gen-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.gen-preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 11px 8px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.gen-preset:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.gen-preset input {
+  margin: 0;
+}
+.gen-preset strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .gen-row {
   display: flex;
   gap: 10px;
