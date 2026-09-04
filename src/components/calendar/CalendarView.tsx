@@ -100,6 +100,13 @@ function CalendarBody({
 
   const weeks = useMemo(() => buildMonthGrid(month), [month])
   const dayMap = useMemo(() => keywordsByDay(keywords, month), [keywords, month])
+  const agendaEntries = useMemo(() => {
+    const entries = [...dayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    if (month !== today.slice(0, 7)) return entries
+    const upcoming = entries.filter(([iso]) => iso >= today)
+    const past = entries.filter(([iso]) => iso < today).reverse()
+    return [...upcoming, ...past]
+  }, [dayMap, month, today])
 
   const detailItems = detailDay ? (dayMap.get(detailDay) ?? []) : []
 
@@ -131,9 +138,7 @@ function CalendarBody({
 
       {narrow ? (
         <div className="cal-agenda">
-          {[...dayMap.entries()]
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([iso, items]) => (
+          {agendaEntries.map(([iso, items]) => (
               <section key={iso} className="cal-agenda-day">
                 <h4 className={iso === today ? 'is-today' : undefined}>
                   {agendaDayLabel(iso)}
