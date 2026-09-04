@@ -499,15 +499,17 @@ export default function App() {
       )}
 
       <footer className="app-footer">
-        <span>© {new Date().getFullYear()} WOOJOO Stock Planner</span>
-        <span aria-hidden>·</span>
-        <button className="linkish" onClick={() => setShowHelp(true)}>
-          사용법
-        </button>
-        <span aria-hidden>·</span>
-        <button className="linkish" onClick={() => setShowDataNotice(true)}>
-          데이터 처리 안내
-        </button>
+        <span className="footer-copyright">© {new Date().getFullYear()} WOOJOO Stock Planner</span>
+        <span className="footer-links">
+          <span aria-hidden>·</span>
+          <button className="linkish" onClick={() => setShowHelp(true)}>
+            사용법
+          </button>
+          <span aria-hidden>·</span>
+          <button className="linkish" onClick={() => setShowDataNotice(true)}>
+            데이터 처리 안내
+          </button>
+        </span>
       </footer>
 
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}

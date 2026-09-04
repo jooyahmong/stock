@@ -1078,6 +1078,21 @@ input[type='radio'] {
 .app-footer .linkish {
   color: #fff;
 }
+.footer-links {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .footer-copyright,
+  .footer-links {
+    flex-basis: 100%;
+    justify-content: center;
+  }
+  .footer-links > span:first-child {
+    display: none;
+  }
+}
 .data-notice {
   margin: 0;
   padding-left: 18px;
