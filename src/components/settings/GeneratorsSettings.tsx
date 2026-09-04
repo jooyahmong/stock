@@ -44,12 +44,12 @@ export function GeneratorsSettings() {
     initializedDefaults.current = true
     void (async () => {
       const existingKeys = new Set(generators.map((generator) => defaultGeneratorKey(generator.url)))
-      for (const [index, preset] of DEFAULT_GENERATORS.entries()) {
+      for (const preset of DEFAULT_GENERATORS) {
         if (existingKeys.has(preset.key)) continue
         await repo.createGenerator({
           name: preset.name,
           url: preset.url,
-          isDefault: generators.length === 0 && index === 0,
+          isDefault: false,
         })
       }
     })()
@@ -63,7 +63,7 @@ export function GeneratorsSettings() {
       showToast(GPT_URL_HINT, 'error')
       return
     }
-    await repo.createGenerator({ name, url: url.trim() })
+    await repo.createGenerator({ name, url: url.trim(), isDefault: false })
     setName('')
     setUrl('')
     showToast('생성 사이트를 추가했습니다.')

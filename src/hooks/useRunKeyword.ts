@@ -30,14 +30,13 @@ export function useRunKeyword() {
       // first can make the browser reject a pending clipboard write.
       const copied = await copyText(text)
 
-      const def =
-        generators?.find((g) => g.isDefault) ?? generators?.[0] ?? null
+      const def = generators?.find((g) => g.isDefault) ?? null
 
       if (!def || !def.url) {
         showToast(
           copied
-            ? '프롬프트를 복사했습니다. 설정 > 생성에서 생성 사이트 주소를 먼저 저장하세요.'
-            : '설정 > 생성에서 생성 사이트 주소를 먼저 저장하세요.',
+            ? '프롬프트를 복사했습니다. 설정 > 생성에서 기본 생성 사이트를 선택하세요.'
+            : '설정 > 생성에서 기본 생성 사이트를 선택하세요.',
           'error',
         )
         onNeedSettings?.()

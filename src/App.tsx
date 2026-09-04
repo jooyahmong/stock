@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRepoQuery, useRepository } from './repo/RepositoryContext'
 import { useUiStore } from './store/uiStore'
-import { ACTIVE_PLAN_KEY } from './lib/settingsKeys'
+import { ACTIVE_PLAN_KEY, GENERATOR_SELECTION_RESET_KEY } from './lib/settingsKeys'
 import {
   periodKind,
   isValidPeriod,
@@ -93,16 +93,31 @@ export default function App() {
   const runMyGpt = useRunKeyword()
   const genConfig = useGenerationConfig()
   const { data: generators } = useRepoQuery((r) => r.listGenerators(), [])
-  const hasMyGpt = (generators ?? []).some((g) => g.url.trim().length > 0)
-  const defaultGpt =
-    (generators ?? []).find((g) => g.isDefault && g.url.trim()) ??
-    (generators ?? []).find((g) => g.url.trim()) ??
-    null
+  const resetGeneratorSelection = useRef(false)
+  useEffect(() => {
+    if (!generators || resetGeneratorSelection.current) return
+    resetGeneratorSelection.current = true
+    let shouldReset = false
+    try {
+      shouldReset = localStorage.getItem(GENERATOR_SELECTION_RESET_KEY) !== 'ready'
+    } catch {
+      return
+    }
+    if (!shouldReset) return
+    void (async () => {
+      for (const generator of generators) {
+        if (generator.isDefault) await repo.updateGenerator(generator.id, { isDefault: false })
+      }
+      localStorage.setItem(GENERATOR_SELECTION_RESET_KEY, 'ready')
+    })()
+  }, [generators, repo])
+  const defaultGpt = (generators ?? []).find((g) => g.isDefault && g.url.trim()) ?? null
+  const hasMyGpt = defaultGpt !== null
 
   const openGpt = useCallback(() => {
     if (!defaultGpt || !isAllowedGptUrl(defaultGpt.url)) {
       useUiStore.getState().showToast(
-        '먼저 설정 > 생성에서 생성 사이트 주소를 저장하세요.',
+        '먼저 설정 > 생성에서 기본 생성 사이트를 선택하세요.',
         'error',
       )
       setShowSettings(true)
@@ -541,9 +556,12 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             지난 기록은 달력에서 확인할 수 있습니다.
           </li>
           <li>
-            <b>생성 사이트 연결</b> — 설정 → 생성 → 생성 사이트에 ChatGPT·Gemini·Midjourney 등의 주소를
-            저장하고 그림 스타일을 선택합니다. 키워드를 클릭하면 스타일 지시문까지
-            복사되고 그 링크가 새 탭으로 열립니다. 붙여넣고 전송해 이미지를 생성하세요.
+            <b>생성 사이트 선택</b> — 설정 → 생성 → 생성 사이트에서
+            ChatGPT·Gemini·Midjourney 중 사용할 사이트를 먼저 선택하고 그림 스타일을
+            정합니다. 초기에는 아무 사이트도 선택되어 있지 않습니다. 개인 GPTs 등
+            다른 사이트는 아래에 이름과 HTTPS 주소를 추가한 뒤 기본으로 선택하세요.
+            키워드를 클릭하면 스타일 지시문까지 복사되고 선택한 사이트가 새 탭으로
+            열립니다. 붙여넣고 전송해 이미지를 생성하세요.
           </li>
           <li>
             <b>진행 체크</b> — 각 키워드의 <b>생성 / 미캔</b> 체크박스로 상태를
