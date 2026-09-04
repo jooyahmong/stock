@@ -93,8 +93,11 @@ input[type='radio'] {
   border-top: 1px solid var(--border-strong);
 }
 .past-dates-title {
-  font-size: 14px;
-  color: var(--text-soft);
+  margin: 4px 0 16px;
+  color: var(--danger);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
 }
 
 /* ---------- layout ---------- */

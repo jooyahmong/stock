@@ -578,8 +578,16 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           </li>
           <li>
             <b>백업</b> — 데이터는 이 브라우저에만 저장됩니다. 툴바의 <b>Full
-            Export</b>로 Excel 백업, <b>Import Excel</b>로 복원(같은 날짜+키워드는
-            체크값을 덮어씀). <b>Template</b>로 빈 양식을 받을 수 있습니다.
+            Export</b>를 누르면 모든 날짜·키워드·체크 상태가 담긴 Excel 파일을
+            내려받습니다. <b>Template</b>에서는 새로 작성할 수 있는 빈 양식을
+            받을 수 있습니다.
+          </li>
+          <li>
+            <b>가져오기</b> — 내려받은 Excel에서 날짜·Keyword·체크값을 수정한 뒤
+            <b> Import Excel</b>로 가져오면 플래너에 반영됩니다. 같은 날짜+Keyword는
+            기존 항목의 체크값을 갱신하고, 새 조합은 새 항목으로 추가합니다. Excel에서
+            삭제하거나 날짜·Keyword를 바꾼 기존 항목까지 파일과 같게 맞추려면 미리보기의
+            <b> 파일과 완전히 일치시키기</b>를 선택하세요.
           </li>
         </ol>
         ) : (
