@@ -188,16 +188,18 @@ export default function App() {
     [grouping, kind, selectedMonth],
   )
 
-  // Date-plan lists follow the selected month and keep its past dates at the bottom.
+  // Date-plan lists show every date in the selected month. Past dates stay at the bottom
+  // in chronological order so the first day of the month appears first.
   const listView = useMemo(
     () => getListView(
       listGroups,
       kind === 'date' ? today : currentPeriod(kind),
       listWindow,
-      grouping?.filtering ?? false,
+      (grouping?.filtering ?? false) || calendarAvailable,
       true,
+      calendarAvailable,
     ),
-    [grouping?.filtering, listGroups, listWindow, kind, today],
+    [grouping?.filtering, listGroups, listWindow, kind, today, calendarAvailable],
   )
 
   // "전체 선택" targets the keywords currently on screen (list window +
@@ -554,8 +556,8 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         <ol className="help-steps">
           <li>
             <b>키워드 확인</b> — 달력이 기본 화면입니다. 날짜별 키워드를 확인하고,
-            오늘 이후 작업은 목록 보기에서 수정·추가(+ 날짜 추가)·삭제하세요.
-            지난 기록은 달력에서 확인할 수 있습니다.
+            목록 보기에서는 선택한 달의 모든 날짜를 한 번에 보며
+            수정·추가(+ 날짜 추가)·삭제할 수 있습니다.
           </li>
           <li>
             <b>생성 사이트 선택</b> — 설정 → 생성 → 생성 사이트에서

@@ -32,6 +32,14 @@ describe('today-first list', () => {
     expect(view.showPast).toBe(false)
   })
 
+  it('shows calendar-backed past dates from the start of the month when requested', () => {
+    const view = getListView(groups, anchor, DEFAULT_LIST_WINDOW, true, true, true)
+    expect(view.visible).toEqual(groups.slice(2))
+    expect(view.past).toEqual(groups.slice(0, 2))
+    expect(view.showPast).toBe(true)
+    expect(view.windowed).toBe(false)
+  })
+
   it('expanding past dates does not displace today', () => {
     const view = getListView(groups, anchor, { ...DEFAULT_LIST_WINDOW, past: true }, false)
     expect(view.visible[0].period).toBe(anchor)

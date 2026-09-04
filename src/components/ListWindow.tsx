@@ -17,9 +17,13 @@ export function getListView<T extends { period: string }>(
   window: ListWindowState,
   filtering: boolean,
   includePast = true,
+  oldestPastFirst = false,
 ) {
   const upcoming = groups.filter((g) => g.period >= anchor)
-  const past = includePast ? groups.filter((g) => g.period < anchor).reverse() : []
+  const pastGroups = groups.filter((g) => g.period < anchor)
+  const past = includePast
+    ? (oldestPastFirst ? pastGroups : pastGroups.reverse())
+    : []
   const expanded = filtering || window.all
   return {
     visible: expanded ? upcoming : upcoming.slice(0, window.after),
