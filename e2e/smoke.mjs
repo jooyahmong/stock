@@ -934,7 +934,7 @@ const run = async () => {
     if (seen.length !== 12) throw new Error('expected 12 distinct months')
   })
 
-  await test('Calendar mobile: agenda 표시, page 가로 스크롤 없음', async (page) => {
+  await test('Calendar mobile: compact month grid + day modal, page 가로 스크롤 없음', async (page) => {
     await page.setViewportSize({ width: 375, height: 780 })
     await boot(page)
     await newPlan(page, 'Cal Mobile')
@@ -943,10 +943,12 @@ const run = async () => {
     await addKeywordOnDate(page, pastIso, 'mobile kw')
 
     await page.getByRole('tab', { name: '달력 보기' }).click()
-    await page.locator('.cal-agenda').waitFor()
+    await page.locator('.mobile-cal-grid').waitFor()
     if ((await page.locator('.cal-grid').count()) !== 0)
-      throw new Error('narrow view must not render the 7-col grid')
-    await page.locator('.cal-kw', { hasText: 'mobile kw' }).waitFor()
+      throw new Error('narrow view must render only the compact grid')
+    const dayCell = page.getByRole('button', { name: `${pastIso} · 키워드 1개`, exact: true })
+    await dayCell.click()
+    await page.locator('.cal-day-list .cal-kw', { hasText: 'mobile kw' }).waitFor()
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )

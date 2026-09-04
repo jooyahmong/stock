@@ -6,7 +6,6 @@ import {
   currentMonth,
   earliestDateMonth,
   formatMonthTitle,
-  genMark,
   keywordsByDay,
   shiftMonth,
   todayIso,
@@ -14,16 +13,10 @@ import {
 } from '../../domain/calendar'
 import { useIsNarrow } from '../../lib/useMediaQuery'
 import { CalendarDayCell } from './CalendarDayCell'
-import { CalendarKeywordLine } from './CalendarKeywordLine'
 import { DayKeywordsModal } from './DayKeywordsModal'
+import { MobileCalendarDayCell } from './MobileCalendarDayCell'
 
-const WD = ['일', '월', '화', '수', '목', '금', '토']
-
-function agendaDayLabel(dayIso: string): string {
-  const [y, m, d] = dayIso.split('-').map(Number)
-  const wd = WD[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
-  return `${m}월 ${d}일 (${wd})`
-}
+const MOBILE_WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 /**
  * Monthly Calendar View. Read-only over the existing plan data — it renders
@@ -100,14 +93,6 @@ function CalendarBody({
 
   const weeks = useMemo(() => buildMonthGrid(month), [month])
   const dayMap = useMemo(() => keywordsByDay(keywords, month), [keywords, month])
-  const agendaEntries = useMemo(() => {
-    const entries = [...dayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-    if (month !== today.slice(0, 7)) return entries
-    const upcoming = entries.filter(([iso]) => iso >= today)
-    const past = entries.filter(([iso]) => iso < today).reverse()
-    return [...upcoming, ...past]
-  }, [dayMap, month, today])
-
   const detailItems = detailDay ? (dayMap.get(detailDay) ?? []) : []
 
   return (
@@ -137,25 +122,16 @@ function CalendarBody({
       </div>
 
       {narrow ? (
-        <div className="cal-agenda">
-          {agendaEntries.map(([iso, items]) => (
-              <section key={iso} className="cal-agenda-day">
-                <h4 className={iso === today ? 'is-today' : undefined}>
-                  {agendaDayLabel(iso)}
-                </h4>
-                {items.map((k) => (
-                  <CalendarKeywordLine
-                    key={k.id}
-                    keyword={k.keyword}
-                    keywordItemId={k.id}
-                    mark={genMark(iso, today, isGenerated(k))}
-                    onRun={onRun}
-                  />
-                ))}
-              </section>
-            ))}
+        <div className="mobile-cal-grid" role="grid">
+          {MOBILE_WEEKDAY_LABELS.map((weekday) => (
+            <div key={weekday} className="mobile-cal-weekday" role="columnheader">{weekday}</div>
+          ))}
+          {weeks.flat().map((cell) => (
+            <MobileCalendarDayCell key={cell.iso} cell={cell} today={today}
+              items={dayMap.get(cell.iso) ?? []} isGenerated={isGenerated} onOpenDay={setDetailDay} />
+          ))}
           {dayMap.size === 0 && (
-            <p className="hint">이 달에 등록된 키워드가 없습니다.</p>
+            <p className="hint mobile-cal-empty">이 달에 등록된 키워드가 없습니다.</p>
           )}
         </div>
       ) : (
