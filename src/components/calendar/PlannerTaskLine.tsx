@@ -28,7 +28,15 @@ export function PlannerTaskLine({
       >
         {completed ? '☑' : '□'}
       </button>
-      <button type="button" className="cal-kw-text-btn" title={keyword} onClick={onOpen}>
+      <button
+        type="button"
+        className="cal-kw-text-btn"
+        title={keyword}
+        onClick={(e) => {
+          e.stopPropagation()
+          onOpen()
+        }}
+      >
         <span className="cal-kw-text">{keyword}</span>
       </button>
     </div>

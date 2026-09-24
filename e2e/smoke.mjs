@@ -1251,6 +1251,84 @@ const run = async () => {
       throw new Error('toggling the checkbox must not open the day modal')
   })
 
+  await test('Planner 달력: 작업이 있는 날짜도 빈 배경 클릭 시 Quick Add (같은 핸들러 재사용, outside-month/Stock 예외)', async (page) => {
+    await boot(page)
+    await newPlannerPlan(page, 'Planner Cal Bg Test')
+    const dateIso = ymd(new Date())
+    await addTaskOnDate(page, dateIso, '기존 작업')
+
+    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await goToMonth(page, dateIso.slice(0, 7))
+    await page.locator('.cal-grid').waitFor()
+
+    const dayNumBtn = page.getByRole('button', { name: `${dateIso} · 할 일 1개`, exact: true })
+    await dayNumBtn.waitFor()
+    const cell = page.locator('.cal-cell.cal-cell-plannable', { has: dayNumBtn })
+    await cell.waitFor()
+    const box = await cell.boundingBox()
+    if (!box) throw new Error('day cell not visible')
+
+    // click near the bottom of the cell — below the single existing task
+    // line, in the cell's own empty background, not on the day number or
+    // task line themselves.
+    await page.mouse.click(box.x + 10, box.y + box.height - 6)
+    await page.locator('.planner-day-tasks').waitFor()
+    await page.locator('.planner-day-task', { hasText: '기존 작업' }).waitFor()
+
+    // the background click reuses the exact same Quick Add handler as "+ 추가"
+    await page.locator('.pg-add input').fill('두번째 작업')
+    await page.locator('.pg-add').getByRole('button', { name: '추가' }).click()
+    await page.locator('.planner-day-task', { hasText: '두번째 작업' }).waitFor()
+    await page.keyboard.press('Escape')
+
+    // outside-month filler cells never gain the background handler, even for Planner
+    const outCells = page.locator('.cal-cell.cal-cell-out')
+    if (await outCells.count()) {
+      if (await outCells.first().evaluate((el) => el.classList.contains('cal-cell-plannable')))
+        throw new Error('outside-month cells must never become background-clickable')
+    }
+
+    // Stock cells: no background handler at all, click does nothing
+    await newPlan(page, 'Still Stock Bg')
+    const stockDateIso = ymd(new Date())
+    await addKeywordOnDate(page, stockDateIso, '스톡 키워드')
+    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await goToMonth(page, stockDateIso.slice(0, 7))
+    await page.locator('.cal-grid').waitFor()
+    const stockDayNumBtn = page.getByRole('button', { name: `${stockDateIso} · 키워드 1개`, exact: true })
+    await stockDayNumBtn.waitFor()
+    const stockCell = page.locator('.cal-cell', { has: stockDayNumBtn })
+    if (await stockCell.evaluate((el) => el.classList.contains('cal-cell-plannable')))
+      throw new Error('Stock cells must never get the Planner background click-to-add handler')
+    const stockBox = await stockCell.boundingBox()
+    await page.mouse.click(stockBox.x + 10, stockBox.y + stockBox.height - 6)
+    await page.waitForTimeout(150)
+    if (await page.locator('.modal').count())
+      throw new Error('clicking a Stock cell background must not open anything')
+  })
+
+  await test('Planner 달력 mobile: 작업이 있는 날짜 셀도 탭하면 Quick Add 열림 (별도 처리 불필요)', async (page) => {
+    await page.setViewportSize({ width: 375, height: 780 })
+    await boot(page)
+    await newPlannerPlan(page, 'Planner Cal Mobile')
+    const dateIso = ymd(new Date())
+    await addTaskOnDate(page, dateIso, '모바일 작업')
+
+    await openCalendarMonth(page, dateIso.slice(0, 7))
+    if ((await page.locator('.cal-grid').count()) !== 0)
+      throw new Error('narrow view must render only the compact grid')
+
+    const dayCell = page.getByRole('button', { name: `${dateIso} · 할 일 1개`, exact: true })
+    await dayCell.click()
+    await page.locator('.planner-day-tasks').waitFor()
+    await page.locator('.planner-day-task', { hasText: '모바일 작업' }).waitFor()
+
+    // same Quick Add handler as desktop — mobile never needed a separate one
+    await page.locator('.pg-add input').fill('모바일 추가')
+    await page.locator('.pg-add').getByRole('button', { name: '추가' }).click()
+    await page.locator('.planner-day-task', { hasText: '모바일 추가' }).waitFor()
+  })
+
   await test('Planner Excel: Template/Full Export = Date | Task | 완료', async (page) => {
     await boot(page)
     await newPlannerPlan(page, 'Planner Excel Test')

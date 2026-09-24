@@ -34,19 +34,33 @@ export function CalendarDayCell({
   // task Quick-Added on an out-of-month cell would immediately vanish from
   // this grid (only reappearing after navigating to its real month).
   const canOpen = (isPlanner && cell.inMonth) || items.length > 0
+  // Same-day/inMonth condition as `canOpen`, but this one drives a click
+  // handler on the cell's own background (not just the day-number button),
+  // so it deliberately excludes Stock (purpose 'stock' never gets this
+  // handler — the cell's background stays inert there, unchanged from
+  // before). Every interactive child (checkbox, task text, day number, +N,
+  // + 추가) calls stopPropagation in its own onClick, so this background
+  // handler only ever fires for an actual click on empty cell space — each
+  // child's action and this one never double-fire for the same click.
+  const canOpenBackground = isPlanner && cell.inMonth
 
   return (
     <div
       className={
         'cal-cell' +
         (cell.inMonth ? '' : ' cal-cell-out') +
-        (isToday ? ' cal-cell-today' : '')
+        (isToday ? ' cal-cell-today' : '') +
+        (canOpenBackground ? ' cal-cell-plannable' : '')
       }
+      onClick={canOpenBackground ? () => onOpenDay(cell.iso) : undefined}
     >
       <button
         type="button"
         className="cal-daynum"
-        onClick={() => canOpen && onOpenDay(cell.iso)}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (canOpen) onOpenDay(cell.iso)
+        }}
         aria-label={`${cell.iso}${items.length ? ` · ${isPlanner ? '할 일' : '키워드'} ${items.length}개` : ''}`}
       >
         {cell.day}
@@ -76,13 +90,23 @@ export function CalendarDayCell({
           <button
             type="button"
             className="cal-more"
-            onClick={() => onOpenDay(cell.iso)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenDay(cell.iso)
+            }}
           >
             +{extra}개
           </button>
         )}
         {isPlanner && cell.inMonth && items.length === 0 && (
-          <button type="button" className="cal-add-hint" onClick={() => onOpenDay(cell.iso)}>
+          <button
+            type="button"
+            className="cal-add-hint"
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenDay(cell.iso)
+            }}
+          >
             + 추가
           </button>
         )}

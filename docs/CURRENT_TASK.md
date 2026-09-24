@@ -70,11 +70,14 @@ _Nothing in progress right now._
   see `docs/specs/general-planner.md` for the full spec and
   `docs/DECISIONS.md` for the reasoning.
 - **What shipped:** plan creation purpose picker, Planner default status
-  column (완료 only), Calendar Quick Add (in-month cells), completion
-  checkboxes (calendar + list), task edit/delete/date-change, no bulk
-  selection for Planner, no generation on task click, Planner Excel
-  Template/Full Export (`Date | Task | 완료`) reusing the Stock Excel
-  parser/builders via an optional `itemLabel` param.
+  column (완료 only), Calendar Quick Add (in-month cells — including a click
+  anywhere on a cell's empty background, not just the day number or the
+  `+ 추가` hint, so cells that already hold 1–2 tasks can still be
+  quick-added to; see `docs/specs/general-planner.md` → "Calendar Quick
+  Add"), completion checkboxes (calendar + list), task edit/delete/
+  date-change, no bulk selection for Planner, no generation on task click,
+  Planner Excel Template/Full Export (`Date | Task | 완료`) reusing the
+  Stock Excel parser/builders via an optional `itemLabel` param.
 - **Verification:** `tsc -p . --noEmit` clean; unit suite 131/131 (was
   118/118 before this feature — 13 new tests, 0 regressions); production
   build clean; new Planner E2E scenarios (4) all pass; Stock E2E scenarios

@@ -1248,6 +1248,12 @@ input[type='radio'] {
 .cal-cell-out {
   background: var(--bg-soft);
 }
+.cal-cell-plannable {
+  cursor: pointer;
+}
+.cal-cell-plannable:hover {
+  background: var(--bg-soft);
+}
 .cal-cell-out .cal-daynum {
   color: var(--text-mute);
   opacity: 0.6;

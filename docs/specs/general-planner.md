@@ -44,7 +44,33 @@ automatically protects it from being hidden or deleted.
 ## Calendar Quick Add
 
 Desktop grid (`CalendarDayCell`): a Planner cell can always be opened — even
-with zero tasks — via the day number or a `+ 추가` hint shown when empty.
+with zero tasks — via the day number, a `+ 추가` hint shown when empty, **or
+a click anywhere on the cell's own empty background** (`cal-cell-plannable`
+class + an `onClick` on the outer `.cal-cell` div, gated to `purpose ===
+'planner' && cell.inMonth`). This covers cells that already hold 1–2 tasks
+too — clicking the blank space below the existing task lines opens the same
+day, not just the day-number button. It is the exact same `onOpenDay`
+handler as every other entry point (day number, `+N개`, `+ 추가`) — no
+second/duplicate handler was added. Every interactive child — the completion
+checkbox (`PlannerTaskLine`), task text, day number, `+N개`, and `+ 추가` —
+calls `stopPropagation()` in its own `onClick`, so the background handler
+only ever fires for an actual click on empty cell space; each child's own
+action runs exactly once per click, never doubled up with the background
+handler. Stock cells never get this `onClick` at all — the div's
+`onClick` prop is `undefined` for `purpose === 'stock'`, so Stock's grid is
+byte-for-byte unchanged. Outside-month filler cells are excluded the same
+way `canOpen` already was (`keywordsByDay` indexes strictly by the displayed
+month — see "Day display" below). No new keyboard handling was added to the
+cell background itself (making the whole cell a focusable `role="button"`
+while it also contains real `<button>` children is a nested-interactive-
+element anti-pattern); keyboard users reach the same modal through the
+pre-existing, already-focusable day-number button. Mobile needed no change:
+`MobileCalendarDayCell` already renders the entire cell as one `<button>`
+with `onClick={() => canOpen && onOpenDay(cell.iso)}`, and `canOpen` was
+already `true` for any in-month Planner cell regardless of task count — so
+tapping anywhere on a mobile cell, empty or not, already opened the same
+flow before this change.
+
 Opening a day shows `DayKeywordsModal`'s Planner branch: existing tasks (with
 a completion checkbox) plus a Quick Add row (`pg-add`-styled input + Enter /
 추가 button) that calls `repo.createKeyword({ planId, period: dayIso,

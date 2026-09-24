@@ -5,11 +5,21 @@ Status: **IMPLEMENTED**. Lives in `src/components/calendar/`, logic in
 
 ## Role
 
-Calendar View is **read + click-to-generate only**. It never edits keyword
-text, dates, or status directly, and never does drag-and-drop — those stay
-in list view. It's the **default main screen** (`src/lib/viewModePref.ts`,
-`readViewMode()` defaults to `'calendar'`); the last view the user picked
-(list or calendar) is then remembered in `localStorage`.
+Calendar View is **read + click-to-generate only** — for `purpose === 'stock'`
+plans. It never edits keyword text, dates, or status directly, and never does
+drag-and-drop — those stay in list view. It's the **default main screen**
+(`src/lib/viewModePref.ts`, `readViewMode()` defaults to `'calendar'`); the
+last view the user picked (list or calendar) is then remembered in
+`localStorage`.
+
+For `purpose === 'planner'` plans this "read-only" framing does not apply:
+Calendar also supports adding tasks in place via Quick Add (clicking a day
+number, the `+ 추가` hint, or any empty background inside an in-month cell)
+and toggling completion directly from the compact grid cell — see
+`docs/specs/general-planner.md` → "Calendar Quick Add" for the exact
+behavior and event-propagation details. This is purpose-gated: Stock cells
+never receive the background click handler and behave exactly as described
+in this file, unchanged.
 
 Only available for date-based plans (`calendarAvailable = kind === 'date'`).
 Since only `'365'`-type plans can currently be created, this is effectively
