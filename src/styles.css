@@ -1422,11 +1422,118 @@ input[type='radio'] {
   background: var(--bg);
   text-align: center;
 }
+.mobile-cal-add-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-mute);
+}
+.mobile-cal-cell.is-outside .mobile-cal-add-hint {
+  visibility: hidden;
+}
 
 @media (max-width: 900px) {
   .cal-cell {
     min-height: 84px;
   }
+}
+
+/* ---------- planner (General Planner / Diary / To-do) ---------- */
+.task-check-dot {
+  flex: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-mute);
+}
+.task-check-dot.is-done {
+  color: #1565ff;
+}
+.planner-task-line {
+  padding-left: 2px;
+}
+.cal-kw-text-btn {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.cal-add-hint {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--text-mute);
+  font-size: 11px;
+  padding: 1px 4px;
+}
+.cal-add-hint:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.planner-day-tasks {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.planner-day-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+}
+.planner-day-task:hover {
+  background: var(--bg-soft);
+}
+.planner-day-task .task-check-dot {
+  font-size: 16px;
+}
+.planner-day-task-text {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 3px 4px;
+  border-radius: 5px;
+  font-size: 13px;
+  color: var(--text);
+}
+.planner-day-task-text:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.kw-edit-group {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.kw-edit-date {
+  flex: none;
+  padding: 5px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  font-size: 12.5px;
+}
+
+.plan-purpose-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
 }
 
 /* ---------- generation ---------- */

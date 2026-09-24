@@ -3,6 +3,7 @@ import type { Plan, PlanSnapshot } from '../repo/types'
 import { useRepository } from '../repo/RepositoryContext'
 import { useUiStore } from '../store/uiStore'
 import { periodKind } from '../domain/periods'
+import { planPurpose, itemLabelFor } from '../domain/planPurpose'
 import { parseImportFile, type ImportPreview } from '../domain/excel'
 import { Modal } from './Modal'
 
@@ -28,6 +29,7 @@ export function ImportPreviewModal({
   const [deleteMissing, setDeleteMissing] = useState(false)
 
   const kind = periodKind(plan.type)
+  const itemLabel = itemLabelFor(planPurpose(plan))
 
   const onFile = async (file: File) => {
     setFileName(file.name)
@@ -41,6 +43,7 @@ export function ImportPreviewModal({
           keyword: k.keyword,
         })),
         statusColumns: snapshot.statusColumns.map((c) => ({ id: c.id, name: c.name })),
+        itemLabel,
       })
       setPreview(result)
       setPhase('preview')
@@ -131,11 +134,11 @@ export function ImportPreviewModal({
         <div className="import-pick">
           <p className="hint">
             기준 열은 <b>{preview?.periodHeader ?? kindLabel(kind)}</b>, 그리고{' '}
-            <b>Keyword</b> 열이 필요합니다. 확장 열(생성 / 미캔 / 사용자 단계)이 있으면
+            <b>{itemLabel}</b> 열이 필요합니다. 확장 열(체크 항목)이 있으면
             자동으로 인식합니다.
           </p>
           <p className="hint">
-            같은 <b>{kindLabel(kind)} + Keyword</b> 는 기존 항목으로 보고 <b>체크값을
+            같은 <b>{kindLabel(kind)} + {itemLabel}</b> 는 기존 항목으로 보고 <b>체크값을
             그대로 덮어씁니다</b> (체크 해제도 반영). 없는 항목만 새로 추가됩니다.
           </p>
           <input

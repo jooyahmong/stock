@@ -4,6 +4,7 @@ import { Modal } from '../Modal'
 import { GeneratorsSettings } from './GeneratorsSettings'
 import { ImageStylesSettings } from './ImageStylesSettings'
 import { StatusColumnsSettings } from './StatusColumnsSettings'
+import { planPurpose, itemLabelFor } from '../../domain/planPurpose'
 import {
   directGenerationEnabled,
   useGenerationConfig,
@@ -33,7 +34,10 @@ export function SettingsModal({
   onDownloadTemplate: () => void
   onFullExport: () => void
 }) {
-  const [tab, setTab] = useState<Tab>('generator')
+  const purpose = planPurpose(plan)
+  const isPlanner = purpose === 'planner'
+  const itemLabel = itemLabelFor(purpose)
+  const [tab, setTab] = useState<Tab>(isPlanner ? 'stages' : 'generator')
   const [step, setStep] = useState<GeneratorStep>('style')
   const panelRef = useRef<HTMLDivElement>(null)
   const genCfg = useGenerationConfig()
@@ -42,6 +46,12 @@ export function SettingsModal({
   useEffect(() => {
     panelRef.current?.scrollTo({ top: 0 })
   }, [tab, step, mode])
+
+  // Planner plans never generate — if the plan changes out from under an open
+  // modal, don't leave it stuck on the (now hidden) 생성 tab.
+  useEffect(() => {
+    if (isPlanner && tab === 'generator') setTab('stages')
+  }, [isPlanner, tab])
 
   function navigateStep(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1
@@ -56,13 +66,15 @@ export function SettingsModal({
   return (
     <Modal title="설정" onClose={onClose} width={720} contained>
       <div className="settings-tabs" role="group" aria-label="설정 메뉴">
-        <button
-          className={tab === 'generator' ? 'is-active' : ''}
-          aria-pressed={tab === 'generator'}
-          onClick={() => setTab('generator')}
-        >
-          생성
-        </button>
+        {!isPlanner && (
+          <button
+            className={tab === 'generator' ? 'is-active' : ''}
+            aria-pressed={tab === 'generator'}
+            onClick={() => setTab('generator')}
+          >
+            생성
+          </button>
+        )}
         <button
           className={tab === 'stages' ? 'is-active' : ''}
           aria-pressed={tab === 'stages'}
@@ -79,7 +91,7 @@ export function SettingsModal({
         </button>
       </div>
 
-      {tab === 'generator' && mode === 'my-gpt' && (
+      {!isPlanner && tab === 'generator' && mode === 'my-gpt' && (
         <div className="generator-steps" role="tablist" aria-label="생성 설정 단계">
           {GENERATOR_STEPS.map((item, index) => (
             <button key={item.id} role="tab" id={`generator-step-${item.id}`}
@@ -95,7 +107,7 @@ export function SettingsModal({
       )}
 
       <div className="settings-panel" ref={panelRef}>
-        {tab === 'generator' && (
+        {!isPlanner && tab === 'generator' && (
           <>
             {directGenerationEnabled && <GenerationModeChooser />}
 
@@ -127,7 +139,7 @@ export function SettingsModal({
           <>
             <p className="hint">
               계획 <strong className="settings-plan-name">[ {plan.name} ]</strong>의 체크 항목입니다. 왼쪽 체크로 목록 표시 여부를
-              바꿉니다. 기본값 <b>생성 / 미캔</b>은 이름 변경·순서 변경만 가능합니다.
+              바꿉니다. 기본값 <b>{isPlanner ? '완료' : '생성 / 미캔'}</b>은 이름 변경·순서 변경만 가능합니다.
             </p>
             <StatusColumnsSettings
               planId={plan.id}
@@ -156,19 +168,23 @@ export function SettingsModal({
                   <button className="btn btn-primary" onClick={onFullExport} aria-describedby="backup-export-help">
                     Excel 전체 백업
                   </button>
-                  <p id="backup-export-help">현재 계획의 모든 키워드와 체크 상태를 Excel로 저장합니다. 지난 날짜도 포함됩니다.</p>
+                  <p id="backup-export-help">
+                    현재 계획의 모든 {isPlanner ? '할 일과' : '키워드와'} 체크 상태를 Excel로 저장합니다. 지난 날짜도 포함됩니다.
+                  </p>
                 </div>
                 <div className="storage-action">
                   <button className="btn" onClick={onOpenImport} aria-describedby="backup-import-help">
                     Excel 가져오기 (복원)
                   </button>
-                  <p id="backup-import-help">Excel 파일을 현재 계획으로 불러옵니다. 같은 날짜·키워드는 파일의 체크 상태로 덮어씁니다.</p>
+                  <p id="backup-import-help">Excel 파일을 현재 계획으로 불러옵니다. 같은 날짜·{itemLabel}는 파일의 체크 상태로 덮어씁니다.</p>
                 </div>
                 <div className="storage-action">
                   <button className="btn" onClick={onDownloadTemplate} aria-describedby="backup-template-help">
                     템플릿 내려받기
                   </button>
-                  <p id="backup-template-help">키워드를 직접 작성할 Excel 양식을 받습니다. 작성한 파일은 ‘Excel 가져오기’로 등록하세요.</p>
+                  <p id="backup-template-help">
+                    {isPlanner ? '할 일을' : '키워드를'} 직접 작성할 Excel 양식을 받습니다. 작성한 파일은 ‘Excel 가져오기’로 등록하세요.
+                  </p>
                 </div>
               </div>
             </section>

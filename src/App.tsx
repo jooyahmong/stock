@@ -12,6 +12,7 @@ import {
 } from './domain/periods'
 import { groupKeywords } from './domain/grouping'
 import { findGeneratedColumn } from './domain/statusColumns'
+import { planPurpose } from './domain/planPurpose'
 import { downloadTemplate, downloadFullExport } from './lib/planExcel'
 import { openGptWindow } from './lib/clipboard'
 import { isAllowedGptUrl } from './lib/gptUrl'
@@ -167,6 +168,8 @@ export default function App() {
 
   const kind = activePlan ? periodKind(activePlan.type) : 'date'
   const calendarAvailable = kind === 'date'
+  const purpose = planPurpose(activePlan)
+  const isPlanner = purpose === 'planner'
 
   const grouping = useMemo(() => {
     if (!snapshot) return null
@@ -219,15 +222,19 @@ export default function App() {
     ? genConfig.defaultGenerationMode
     : 'my-gpt'
 
+  // Planner tasks never trigger generation (docs/specs/general-planner.md §7) —
+  // planner-purpose components route clicks to editing instead of calling this,
+  // but guard here too so a stray call can't slip through.
   const onRun = useCallback(
     (keyword: string, keywordItemId: string) => {
+      if (isPlanner) return
       if (generationMode === 'direct') {
         setGenerateFor({ keyword, id: keywordItemId })
       } else {
         runMyGpt(keyword, () => setShowSettings(true))
       }
     },
-    [generationMode, runMyGpt],
+    [isPlanner, generationMode, runMyGpt],
   )
 
   // Direct Generate success -> auto-check the "생성" column (principle 6).
@@ -316,16 +323,18 @@ export default function App() {
                 downloadFullExport(activePlan, snapshot)
                 useUiStore.getState().showToast('Full Export 파일을 내려받았습니다.')
               }}
-              onOpenGpt={generationMode === 'my-gpt' && hasMyGpt ? openGpt : undefined}
+              onOpenGpt={!isPlanner && generationMode === 'my-gpt' && hasMyGpt ? openGpt : undefined}
             />
           </div>
 
           {viewMode === 'calendar' ? (
             <CalendarView
+              planId={activePlan.id}
               keywords={snapshot.keywords}
               statusColumns={snapshot.statusColumns}
               statusMap={snapshot.statusMap}
               dateBased={calendarAvailable}
+              purpose={purpose}
               onRun={onRun}
               onSwitchToList={() => setViewMode('list')}
               month={selectedMonth}
@@ -341,17 +350,22 @@ export default function App() {
                 onToggleSelectAllVisible={(checked) =>
                   selectMany(visibleKeywordIds, checked)
                 }
+                hideSelection={isPlanner}
               />
 
-              <SelectionBar snapshot={snapshot} />
+              {!isPlanner && <SelectionBar snapshot={snapshot} />}
               <ProgressPanel snapshot={snapshot} />
 
               <main className="groups">
                 {listView.upcomingCount === 0 && listView.past.length === 0 && (
                   <p className="empty-state">
                     {grouping.filtering
-                      ? '조건에 맞는 키워드가 없습니다.'
-                      : '키워드가 없습니다. "+ 기간 추가" 후 키워드를 입력하거나 Excel을 Import 하세요.'}
+                      ? isPlanner
+                        ? '조건에 맞는 할 일이 없습니다.'
+                        : '조건에 맞는 키워드가 없습니다.'
+                      : isPlanner
+                        ? '할 일이 없습니다. "+ 날짜 추가" 후 할 일을 입력하거나 Excel을 Import 하세요.'
+                        : '키워드가 없습니다. "+ 날짜 추가" 후 키워드를 입력하거나 Excel을 Import 하세요.'}
                   </p>
                 )}
                 {listView.visible.map((g) => (
@@ -362,6 +376,7 @@ export default function App() {
                     statusMap={snapshot.statusMap}
                     onRun={onRun}
                     onEditPeriod={setEditingPeriod}
+                    purpose={purpose}
                   />
                 ))}
                 {!calendarAvailable && listView.visible.length === 0 && listView.hasPast && (
@@ -421,6 +436,7 @@ export default function App() {
                           statusMap={snapshot.statusMap}
                           onRun={onRun}
                           onEditPeriod={setEditingPeriod}
+                          purpose={purpose}
                         />
                       ))}
                     </div>

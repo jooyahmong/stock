@@ -1,12 +1,17 @@
 import { useState } from 'react'
-import type { Plan, PlanType } from '../repo/types'
+import type { Plan, PlanPurpose } from '../repo/types'
 import { useRepository } from '../repo/RepositoryContext'
 import { useUiStore } from '../store/uiStore'
 import { Modal } from './Modal'
 import { PromptDialog } from './PromptDialog'
 import { ConfirmDialog } from './ConfirmDialog'
+import { planPurpose } from '../domain/planPurpose'
 
-// V1은 계획 유형 선택이 없다. 모든 계획은 날짜(365) 기반.
+const PURPOSE_SUFFIX: Record<PlanPurpose, string> = { stock: '', planner: ' · 일정' }
+
+// V1 has no date-structure (`type`) picker — every plan is date(365) based.
+// `purpose` ('stock' | 'planner') is the only choice offered when creating a
+// plan; see docs/specs/general-planner.md.
 // PlanType('weekly'|'monthly'|'custom')·순수 함수는 재추가 대비 그대로 둔다.
 
 export function PlanBar({
@@ -35,12 +40,17 @@ export function PlanBar({
           >
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {p.name}{PURPOSE_SUFFIX[planPurpose(p)]}
               </option>
             ))}
           </select>
         ) : (
-          activePlan && <span className="plan-current">{activePlan.name}</span>
+          activePlan && (
+            <span className="plan-current">
+              {activePlan.name}
+              {PURPOSE_SUFFIX[planPurpose(activePlan)]}
+            </span>
+          )
         )}
 
         <button className="btn btn-sm" onClick={() => setCreating(true)}>
@@ -69,11 +79,13 @@ export function PlanBar({
       {creating && (
         <NewPlanDialog
           onCancel={() => setCreating(false)}
-          onConfirm={async (name, type) => {
+          onConfirm={async (name, purpose) => {
             setCreating(false)
-            const plan = await repo.createPlan({ name, type })
+            const plan = await repo.createPlan({ name, type: '365', purpose })
             setActivePlanId(plan.id)
-            showToast('계획을 만들었습니다.')
+            showToast(
+              purpose === 'planner' ? '일정 계획을 만들었습니다.' : '계획을 만들었습니다.',
+            )
           }}
         />
       )}
@@ -114,17 +126,23 @@ export function PlanBar({
   )
 }
 
+const PURPOSE_OPTIONS: { purpose: PlanPurpose; label: string; hint: string }[] = [
+  { purpose: 'stock', label: 'Stock 제작', hint: '스톡 키워드·체크 항목(생성/미캔)으로 시작' },
+  { purpose: 'planner', label: '일정 / 다이어리', hint: '빈 Planner — 할 일을 날짜에 바로 추가' },
+]
+
 function NewPlanDialog({
   onCancel,
   onConfirm,
 }: {
   onCancel: () => void
-  // V1은 유형 선택 없이 항상 날짜(365) 계획을 만든다.
-  onConfirm: (name: string, type: PlanType) => void
+  // V1은 날짜(365) 구조 고정, purpose(용도)만 선택한다.
+  onConfirm: (name: string, purpose: PlanPurpose) => void
 }) {
   const [name, setName] = useState('')
+  const [purpose, setPurpose] = useState<PlanPurpose>('stock')
   const submit = () => {
-    if (name.trim()) onConfirm(name.trim(), '365')
+    if (name.trim()) onConfirm(name.trim(), purpose)
   }
   return (
     <Modal
@@ -151,10 +169,28 @@ function NewPlanDialog({
         className="field-input"
         autoFocus
         value={name}
-        placeholder="예: 2027 봄 시즌 스톡"
+        placeholder={purpose === 'planner' ? '예: 2027 일정' : '예: 2027 봄 시즌 스톡'}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
       />
+
+      <label className="field-label">용도</label>
+      <div className="plan-purpose-options">
+        {PURPOSE_OPTIONS.map((o) => (
+          <label key={o.purpose} className="gs-radio">
+            <input
+              type="radio"
+              name="plan-purpose"
+              checked={purpose === o.purpose}
+              onChange={() => setPurpose(o.purpose)}
+            />
+            <span>
+              <b>{o.label}</b>
+              <span className="hint"> — {o.hint}</span>
+            </span>
+          </label>
+        ))}
+      </div>
       <p className="hint">날짜(YYYY-MM-DD) 기반 계획으로 만들어집니다.</p>
     </Modal>
   )

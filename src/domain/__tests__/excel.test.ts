@@ -251,6 +251,95 @@ describe('template + full export round-trip', () => {
   })
 })
 
+describe('Planner — Task item label (docs/specs/general-planner.md §12)', () => {
+  it('template uses the Task header + Task-flavored sample rows', () => {
+    const buf = buildTemplateWorkbook('date', [{ name: '완료' }], 'Task')
+    const wb = XLSX.read(buf, { type: 'array' })
+    const aoa = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], {
+      header: 1,
+    })
+    expect(aoa[0]).toEqual(['Date', 'Task', '완료'])
+    expect(aoa[1][1]).not.toBe('떡국') // not stock's sample content
+    expect(aoa[1][2]).toBe('FALSE')
+  })
+
+  it('stock template is unaffected by the itemLabel default', () => {
+    const buf = buildTemplateWorkbook('date', [{ name: '생성' }])
+    const wb = XLSX.read(buf, { type: 'array' })
+    const aoa = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], {
+      header: 1,
+    })
+    expect(aoa[0]).toEqual(['Date', 'Keyword', '생성'])
+    expect(aoa[1][1]).toBe('떡국')
+  })
+
+  it('full export writes Date | Task | 완료 on a "Planner" sheet', () => {
+    const buf = buildFullExportWorkbook({
+      kind: 'date',
+      keywords: [mkKw('t1', '2027-09-24', '로고 수정', 0)],
+      statusColumns: [mkCol('c1', '완료', 0)],
+      statusMap: { 't1:c1': true },
+      itemLabel: 'Task',
+      sheetName: 'Planner',
+    })
+    const wb = XLSX.read(buf, { type: 'array' })
+    expect(wb.SheetNames).toEqual(['Planner'])
+    const aoa = XLSX.utils.sheet_to_json<string[]>(wb.Sheets['Planner'], { header: 1 })
+    expect(aoa[0]).toEqual(['Date', 'Task', '완료'])
+    expect(aoa[1]).toEqual(['2027-09-24', '로고 수정', 'TRUE'])
+  })
+
+  it('import recognizes a Task column and ignores a plain Keyword column', async () => {
+    const taskFile = sheetToFile([
+      ['Date', 'Task', '완료'],
+      ['2027-09-24', '이메일 보내기', 'FALSE'],
+    ])
+    const preview = await parseImportFile(taskFile, {
+      kind: 'date',
+      existingKeywords: [],
+      statusColumns: [{ id: 'c1', name: '완료' }],
+      itemLabel: 'Task',
+    })
+    expect(preview.ok).toBe(true)
+    expect(preview.rows).toEqual([
+      expect.objectContaining({ keyword: '이메일 보내기', period: '2027-09-24' }),
+    ])
+
+    const keywordFile = sheetToFile([
+      ['Date', 'Keyword'],
+      ['2027-09-24', '떡국'],
+    ])
+    const badPreview = await parseImportFile(keywordFile, {
+      kind: 'date',
+      existingKeywords: [],
+      statusColumns: [],
+      itemLabel: 'Task',
+    })
+    expect(badPreview.ok).toBe(false)
+    expect(badPreview.fatalError).toMatch(/Task/)
+  })
+
+  it('a Planner Full Export round-trips through import with zero duplicates', async () => {
+    const buf = buildFullExportWorkbook({
+      kind: 'date',
+      keywords: [mkKw('t1', '2027-09-24', '운동하기', 0)],
+      statusColumns: [mkCol('c1', '완료', 0)],
+      statusMap: { 't1:c1': true },
+      itemLabel: 'Task',
+    })
+    const file = new File([buf], 'planner-export.xlsx')
+    const preview = await parseImportFile(file, {
+      kind: 'date',
+      existingKeywords: [{ id: 't1', period: '2027-09-24', keyword: '운동하기' }],
+      statusColumns: [{ id: 'c1', name: '완료' }],
+      itemLabel: 'Task',
+    })
+    expect(preview.newCount).toBe(0)
+    expect(preview.updateCount).toBe(1)
+    expect(preview.rows[0].matchedKeywordId).toBe('t1')
+  })
+})
+
 describe('large import', () => {
   it('handles 1200 rows', async () => {
     const rows: unknown[][] = [['Date', 'Keyword']]

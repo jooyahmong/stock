@@ -29,10 +29,22 @@ const ymd = (d) =>
     d.getDate(),
   ).padStart(2, '0')}`
 
-// V1: 계획 유형 선택 없음 — 모든 계획은 날짜(365) 기반.
+// V1: 계획 유형 선택 없음 — 모든 계획은 날짜(365) 기반. purpose 만 고른다(기본 Stock).
 async function newPlan(page, name) {
   await page.getByRole('button', { name: '+ 새 계획' }).click()
   await page.locator('.modal .field-input').fill(name)
+  await page.locator('.modal').getByRole('button', { name: '만들기' }).click()
+  await page.waitForTimeout(250)
+}
+
+/** General Planner / Diary / To-do plan — docs/specs/general-planner.md. */
+async function newPlannerPlan(page, name) {
+  await page.getByRole('button', { name: '+ 새 계획' }).click()
+  await page.locator('.modal .field-input').fill(name)
+  await page
+    .locator('.gs-radio', { hasText: '일정 / 다이어리' })
+    .locator('input')
+    .check()
   await page.locator('.modal').getByRole('button', { name: '만들기' }).click()
   await page.waitForTimeout(250)
 }
@@ -53,6 +65,24 @@ async function addKeywordOnDate(page, dateIso, keyword) {
   await group.locator('.pg-add').getByRole('button', { name: '추가' }).click()
   await group.getByRole('button', { name: keyword, exact: true }).waitFor()
   await input.press('Escape').catch(() => {}) // close the add-row for the next call
+}
+
+/** Same as addKeywordOnDate, but for a Planner plan's "+ 할 일 추가" add-row. */
+async function addTaskOnDate(page, dateIso, task) {
+  await page.getByRole('button', { name: '+ 날짜 추가' }).click()
+  await page.locator('.modal .field-input').fill(dateIso)
+  await page.locator('.modal').getByRole('button', { name: '추가' }).click()
+  const group = page
+    .locator('.period-group')
+    .filter({ has: page.locator('.pg-sub', { hasText: dateIso }) })
+  await group.waitFor()
+  const addBtn = group.getByRole('button', { name: '+ 할 일 추가' })
+  if (await addBtn.count()) await addBtn.click()
+  const input = group.locator('.pg-add input')
+  await input.fill(task)
+  await group.locator('.pg-add').getByRole('button', { name: '추가' }).click()
+  await group.getByRole('button', { name: task, exact: true }).waitFor()
+  await input.press('Escape').catch(() => {})
 }
 
 const ok = (name) => results.push({ name, pass: true })
@@ -953,6 +983,143 @@ const run = async () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
     if (overflow > 2) throw new Error('horizontal overflow of ' + overflow + 'px')
+  })
+
+  // ---- General Planner / Diary / To-do (docs/specs/general-planner.md) ----
+
+  await test('Planner 계획 생성: purpose 선택 + 기본 체크 항목은 완료 하나뿐 + 생성 탭 없음', async (page) => {
+    await boot(page)
+    await newPlannerPlan(page, 'My Diary')
+    // boot() already has the seeded Stock plan, so creating a second plan
+    // switches the picker from .plan-current (single plan) to .plan-select.
+    const planLabel = await page.locator('.plan-select option:checked').innerText()
+    if (!planLabel.includes('My Diary') || !planLabel.includes('일정'))
+      throw new Error('planner plan label: ' + JSON.stringify(planLabel))
+
+    await page.getByRole('button', { name: '⚙ 설정' }).click()
+    if (await page.locator('.settings-tabs button', { hasText: '생성' }).count())
+      throw new Error('Planner plans must not show the 생성 tab (no generation allowed)')
+    // Planner settings default straight to 체크 항목 (생성 tab is hidden), so
+    // "+ 체크 항목 추가" is already on screen — scope to .settings-tabs so the
+    // tab button itself isn't ambiguous with it.
+    await page.locator('.settings-tabs button', { hasText: '체크 항목' }).click()
+    const rows = page.locator('.stage-row')
+    if ((await rows.count()) !== 1) throw new Error('Planner must seed exactly one status column')
+    await rows.filter({ hasText: '완료' }).waitFor()
+    await page.keyboard.press('Escape')
+
+    // A fresh Stock plan (default radio) is unaffected — still 생성/미캔.
+    await newPlan(page, 'Still Stock')
+    await page.getByRole('button', { name: '⚙ 설정' }).click()
+    await page.locator('.settings-tabs button', { hasText: '생성' }).waitFor()
+    await page.locator('.settings-tabs button', { hasText: '체크 항목' }).click()
+    await page.locator('.stage-row', { hasText: '생성' }).waitFor()
+    await page.locator('.stage-row', { hasText: '미캔' }).waitFor()
+  })
+
+  await test('Planner 목록: + 할 일 추가, 완료 체크 즉시 저장 + reload 유지, 선택 체크박스 없음, 클릭=수정(생성 아님)', async (page, context) => {
+    await boot(page)
+    await newPlannerPlan(page, 'Planner List Test')
+    const dateIso = ymd(new Date())
+    await addTaskOnDate(page, dateIso, '로고 수정')
+
+    // no bulk-selection checkbox anywhere for a planner plan
+    if (await page.locator('.select-all').count())
+      throw new Error('Planner toolbar must not show 전체 선택')
+    if (await page.locator('.kw-row .select-box').count())
+      throw new Error('Planner rows must not show a selection checkbox')
+
+    // 완료 checkbox toggles immediately and survives reload. (Only one task
+    // exists in this plan, so `.first()` is a stable handle — unlike a
+    // `hasText` filter, which stops matching once the text moves into an
+    // <input value> during editing below.)
+    const row = page.locator('.kw-row').first()
+    const doneBox = row.locator('.status-check', { hasText: '완료' }).locator('input')
+    await doneBox.check()
+    await page.waitForTimeout(200)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    const row2 = page.locator('.kw-row').first()
+    if (!(await row2.locator('.status-check', { hasText: '완료' }).locator('input').isChecked()))
+      throw new Error('완료 check did not persist across reload')
+
+    // clicking the task text edits it in place — never opens a tab / runs generation
+    const popupPromise = context.waitForEvent('page', { timeout: 3000 }).catch(() => null)
+    await row2.locator('.kw-text', { hasText: '로고 수정' }).click()
+    const popup = await popupPromise
+    if (popup) throw new Error('clicking a Planner task must not open a generation tab')
+    const editInput = row2.locator('.kw-edit')
+    await editInput.waitFor()
+    if ((await editInput.inputValue()) !== '로고 수정')
+      throw new Error('edit input should be pre-filled with the task text')
+  })
+
+  await test('Planner 달력: 빈 날짜 Quick Add → Task 생성, 체크박스 즉시 토글', async (page) => {
+    await boot(page)
+    await newPlannerPlan(page, 'Planner Cal Test')
+    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await page.locator('.cal-grid').waitFor()
+
+    // an empty day cell exposes a "+ 추가" hint (Quick Add), unlike Stock cells
+    const addHint = page.locator('.cal-add-hint').first()
+    await addHint.waitFor()
+    await addHint.click()
+    await page.locator('.planner-day-tasks').waitFor()
+    await page.locator('.pg-add input').fill('이메일 보내기')
+    await page.locator('.pg-add').getByRole('button', { name: '추가' }).click()
+    await page.locator('.planner-day-task', { hasText: '이메일 보내기' }).waitFor()
+    await page.keyboard.press('Escape')
+
+    // back on the grid, the task shows with an unchecked box; toggling it doesn't
+    // open the day modal (checkbox click is a separate hit target from the text)
+    const taskLine = page.locator('.planner-task-line', { hasText: '이메일 보내기' })
+    await taskLine.waitFor()
+    const dot = taskLine.locator('.task-check-dot')
+    if (await dot.evaluate((el) => el.classList.contains('is-done')))
+      throw new Error('new task should start unchecked')
+    await dot.click()
+    await page.waitForTimeout(200)
+    if (!(await dot.evaluate((el) => el.classList.contains('is-done'))))
+      throw new Error('checking the dot in the compact cell should toggle immediately')
+    if (await page.locator('.planner-day-tasks').count())
+      throw new Error('toggling the checkbox must not open the day modal')
+  })
+
+  await test('Planner Excel: Template/Full Export = Date | Task | 완료', async (page) => {
+    await boot(page)
+    await newPlannerPlan(page, 'Planner Excel Test')
+    await addTaskOnDate(page, ymd(new Date()), '운동하기')
+    await page
+      .locator('.kw-row', { hasText: '운동하기' })
+      .locator('.status-check', { hasText: '완료' })
+      .locator('input')
+      .check()
+    await page.waitForTimeout(150)
+
+    const [tplDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Template', exact: true }).click(),
+    ])
+    const tplChunks = []
+    for await (const c of await tplDownload.createReadStream()) tplChunks.push(c)
+    const tplWb = XLSX.read(Buffer.concat(tplChunks), { type: 'buffer' })
+    const tplAoa = XLSX.utils.sheet_to_json(tplWb.Sheets[tplWb.SheetNames[0]], { header: 1 })
+    if (JSON.stringify(tplAoa[0]) !== JSON.stringify(['Date', 'Task', '완료']))
+      throw new Error('planner template header: ' + JSON.stringify(tplAoa[0]))
+
+    const [expDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Full Export', exact: true }).click(),
+    ])
+    const expChunks = []
+    for await (const c of await expDownload.createReadStream()) expChunks.push(c)
+    const expWb = XLSX.read(Buffer.concat(expChunks), { type: 'buffer' })
+    const expAoa = XLSX.utils.sheet_to_json(expWb.Sheets[expWb.SheetNames[0]], { header: 1 })
+    if (JSON.stringify(expAoa[0]) !== JSON.stringify(['Date', 'Task', '완료']))
+      throw new Error('planner full export header: ' + JSON.stringify(expAoa[0]))
+    const taskRow = expAoa.find((r) => r[1] === '운동하기')
+    if (!taskRow || taskRow[2] !== 'TRUE')
+      throw new Error('planner export row: ' + JSON.stringify(taskRow))
   })
 
   await browser.close()

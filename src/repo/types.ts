@@ -25,6 +25,17 @@
 
 export type PlanType = '365' | 'weekly' | 'monthly' | 'custom'
 
+/**
+ * What a plan is *for*, independent of `type` (which only describes its date
+ * structure). `'stock'` = the original stock-keyword tracker. `'planner'` =
+ * a general diary/to-do plan (see docs/specs/general-planner.md).
+ *
+ * Plans created before this field existed have no `purpose` in storage —
+ * treat a missing value as `'stock'` (use `planPurpose()` from
+ * `src/domain/planPurpose.ts` rather than reading `.purpose` directly).
+ */
+export type PlanPurpose = 'stock' | 'planner'
+
 /** Local single-user placeholder. Real workspaces arrive with auth + D1. */
 export const LOCAL_WORKSPACE_ID = 'local'
 
@@ -33,6 +44,8 @@ export interface Plan {
   workspaceId: string
   name: string
   type: PlanType
+  /** Optional for backward compatibility — see `PlanPurpose`. */
+  purpose?: PlanPurpose
   createdAt: string
   updatedAt: string
 }
@@ -96,6 +109,8 @@ export interface AppSetting {
 export interface CreatePlanInput {
   name: string
   type: PlanType
+  /** Defaults to `'stock'` when omitted (see `Plan.purpose`). */
+  purpose?: PlanPurpose
 }
 
 export interface CreateKeywordInput {

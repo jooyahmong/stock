@@ -6,11 +6,14 @@ export function Toolbar({
   visibleCount,
   allVisibleSelected,
   onToggleSelectAllVisible,
+  hideSelection,
 }: {
   snapshot: PlanSnapshot
   visibleCount: number
   allVisibleSelected: boolean
   onToggleSelectAllVisible: (checked: boolean) => void
+  /** Planner plans don't offer bulk selection — see docs/specs/general-planner.md §6. */
+  hideSelection?: boolean
 }) {
   const search = useUiStore((s) => s.search)
   const setSearch = useUiStore((s) => s.setSearch)
@@ -29,15 +32,17 @@ export function Toolbar({
 
   return (
     <div className="toolbar">
-      <label className="select-all" title="현재 보이는 키워드를 모두 선택">
-        <input
-          type="checkbox"
-          checked={visibleCount > 0 && allVisibleSelected}
-          disabled={visibleCount === 0}
-          onChange={(e) => onToggleSelectAllVisible(e.target.checked)}
-        />
-        전체 선택
-      </label>
+      {!hideSelection && (
+        <label className="select-all" title="현재 보이는 키워드를 모두 선택">
+          <input
+            type="checkbox"
+            checked={visibleCount > 0 && allVisibleSelected}
+            disabled={visibleCount === 0}
+            onChange={(e) => onToggleSelectAllVisible(e.target.checked)}
+          />
+          전체 선택
+        </label>
+      )}
 
       <input
         className="search"

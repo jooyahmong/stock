@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { KeywordItem, StatusColumn } from '../repo/types'
+import type { KeywordItem, PlanPurpose, StatusColumn } from '../repo/types'
 import type { PeriodGroup as PeriodGroupData } from '../domain/grouping'
 import { useRepository } from '../repo/RepositoryContext'
 import { useUiStore } from '../store/uiStore'
@@ -12,16 +12,19 @@ export function PeriodGroup({
   statusMap,
   onRun,
   onEditPeriod,
+  purpose = 'stock',
 }: {
   group: PeriodGroupData
   statusColumns: StatusColumn[]
   statusMap: Record<string, boolean>
   onRun: (keyword: string, keywordItemId: string) => void
   onEditPeriod: (period: string) => void
+  purpose?: PlanPurpose
 }) {
   const repo = useRepository()
   const planIdOfGroup = group.items[0]?.planId
   const activePlanId = useUiStore((s) => s.activePlanId)
+  const isPlanner = purpose === 'planner'
 
   const [adding, setAdding] = useState(false)
   const [newKw, setNewKw] = useState('')
@@ -67,10 +70,13 @@ export function PeriodGroup({
             statusColumns={statusColumns}
             statusMap={statusMap}
             onRun={onRun}
+            purpose={purpose}
           />
         ))}
         {group.items.length === 0 && (
-          <p className="pg-empty">이 기간에 키워드가 없습니다.</p>
+          <p className="pg-empty">
+            {isPlanner ? '이 날짜에 할 일이 없습니다.' : '이 기간에 키워드가 없습니다.'}
+          </p>
         )}
       </div>
 
@@ -79,7 +85,7 @@ export function PeriodGroup({
           <input
             autoFocus
             value={newKw}
-            placeholder="키워드 입력 후 Enter"
+            placeholder={isPlanner ? '할 일 입력 후 Enter' : '키워드 입력 후 Enter'}
             onChange={(e) => setNewKw(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') addKeyword()
@@ -98,7 +104,7 @@ export function PeriodGroup({
         </div>
       ) : (
         <button className="pg-add-btn" onClick={() => setAdding(true)}>
-          + 키워드 추가
+          {isPlanner ? '+ 할 일 추가' : '+ 키워드 추가'}
         </button>
       )}
     </section>

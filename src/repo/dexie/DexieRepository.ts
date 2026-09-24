@@ -13,9 +13,10 @@ import {
   type CreateGeneratorInput,
   type PlanSnapshot,
 } from '../types'
+import { DEFAULT_STATUS_NAMES_BY_PURPOSE } from '../../domain/planPurpose'
 
-/** Seeded on every new plan, in this order. */
-export const DEFAULT_STATUS_NAMES = ['생성', '미캔'] as const
+/** Seeded on every new plan, in this order. Kept for the 'stock' purpose default. */
+export const DEFAULT_STATUS_NAMES = DEFAULT_STATUS_NAMES_BY_PURPOSE.stock
 
 export class DexieRepository implements Repository {
   private listeners = new Set<() => void>()
@@ -56,18 +57,20 @@ export class DexieRepository implements Repository {
 
   async createPlan(input: CreatePlanInput): Promise<Plan> {
     const ts = nowIso()
+    const purpose = input.purpose ?? 'stock'
     const plan: Plan = {
       id: newId(),
       workspaceId: this.workspaceId,
       name: input.name.trim() || 'Untitled Plan',
       type: input.type,
+      purpose,
       createdAt: ts,
       updatedAt: ts,
     }
     await db.transaction('rw', db.plans, db.statusColumns, async () => {
       await db.plans.add(plan)
       await db.statusColumns.bulkAdd(
-        DEFAULT_STATUS_NAMES.map((name, i) => ({
+        DEFAULT_STATUS_NAMES_BY_PURPOSE[purpose].map((name, i) => ({
           id: newId(),
           workspaceId: this.workspaceId,
           planId: plan.id,

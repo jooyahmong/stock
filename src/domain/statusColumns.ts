@@ -16,3 +16,18 @@ export function findGeneratedColumn(columns: StatusColumn[]): StatusColumn | nul
     .sort((a, b) => a.order - b.order)
   return defaults[0] ?? null
 }
+
+/**
+ * The single status column that means "완료" for a Planner-purpose plan —
+ * used by Calendar's completion checkboxes and list-view rows. Same
+ * name-first-then-default-fallback strategy as `findGeneratedColumn`, so
+ * renaming 완료 keeps it working.
+ */
+export function findCompletionColumn(columns: StatusColumn[]): StatusColumn | null {
+  const byName = columns.find((c) => c.name.trim() === '완료')
+  if (byName) return byName
+  const defaults = columns
+    .filter((c) => c.isDefault)
+    .sort((a, b) => a.order - b.order)
+  return defaults[0] ?? null
+}

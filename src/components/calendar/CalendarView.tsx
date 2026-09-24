@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import type { KeywordItem, StatusColumn } from '../../repo/types'
-import { findGeneratedColumn } from '../../domain/statusColumns'
+import type { KeywordItem, PlanPurpose, StatusColumn } from '../../repo/types'
+import { findGeneratedColumn, findCompletionColumn } from '../../domain/statusColumns'
+import { useRepository } from '../../repo/RepositoryContext'
 import {
   buildMonthGrid,
   keywordsByDay,
@@ -18,22 +19,28 @@ const MOBILE_WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 /**
  * Monthly Calendar View. Read-only over the existing plan data — it renders
  * KeywordItems by date and delegates every keyword click to `onRun` (the same
- * handler the list view uses). No editing here (spec §9).
+ * handler the list view uses) for stock plans. Planner plans instead show a
+ * completion checkbox per task and a Quick Add flow — no generation is ever
+ * triggered for `purpose === 'planner'` (docs/specs/general-planner.md §7).
  */
 export function CalendarView({
+  planId,
   keywords,
   statusColumns,
   statusMap,
   dateBased,
+  purpose = 'stock',
   onRun,
   onSwitchToList,
   month,
   onMonthChange,
 }: {
+  planId: string
   keywords: KeywordItem[]
   statusColumns: StatusColumn[]
   statusMap: Record<string, boolean>
   dateBased: boolean
+  purpose?: PlanPurpose
   onRun: (keyword: string, keywordItemId: string) => void
   onSwitchToList: () => void
   month: string
@@ -53,9 +60,11 @@ export function CalendarView({
   }
   return (
     <CalendarBody
+      planId={planId}
       keywords={keywords}
       statusColumns={statusColumns}
       statusMap={statusMap}
+      purpose={purpose}
       onRun={onRun}
       month={month}
       onMonthChange={onMonthChange}
@@ -64,33 +73,55 @@ export function CalendarView({
 }
 
 function CalendarBody({
+  planId,
   keywords,
   statusColumns,
   statusMap,
+  purpose,
   onRun,
   month,
   onMonthChange,
 }: {
+  planId: string
   keywords: KeywordItem[]
   statusColumns: StatusColumn[]
   statusMap: Record<string, boolean>
+  purpose: PlanPurpose
   onRun: (keyword: string, keywordItemId: string) => void
   month: string
   onMonthChange: (month: string) => void
 }) {
+  const repo = useRepository()
   const today = todayIso()
   const narrow = useIsNarrow()
+  const isPlanner = purpose === 'planner'
 
   const [detailDay, setDetailDay] = useState<string | null>(null)
 
   const genCol = useMemo(
-    () => findGeneratedColumn(statusColumns),
-    [statusColumns],
+    () => (isPlanner ? findCompletionColumn(statusColumns) : findGeneratedColumn(statusColumns)),
+    [isPlanner, statusColumns],
   )
+  // For stock this means "생성 checked"; for planner it means "완료 checked" —
+  // same shape either way, so the day-cell components don't need to know which.
   const isGenerated = useMemo(
     () => (k: KeywordItem) =>
       genCol ? statusMap[`${k.id}:${genCol.id}`] === true : false,
     [genCol, statusMap],
+  )
+  const onToggleComplete = useMemo(
+    () => (keywordItemId: string, checked: boolean) => {
+      if (genCol) void repo.setKeywordStatus(keywordItemId, genCol.id, checked)
+    },
+    [genCol, repo],
+  )
+  const onQuickAdd = useMemo(
+    () => (dayIso: string, text: string) => {
+      const value = text.trim()
+      if (!value) return
+      void repo.createKeyword({ planId, period: dayIso, keyword: value })
+    },
+    [planId, repo],
   )
 
   const weeks = useMemo(() => buildMonthGrid(month), [month])
@@ -108,10 +139,13 @@ function CalendarBody({
           ))}
           {weeks.flat().map((cell) => (
             <MobileCalendarDayCell key={cell.iso} cell={cell} today={today}
-              items={dayMap.get(cell.iso) ?? []} isGenerated={isGenerated} onOpenDay={setDetailDay} />
+              items={dayMap.get(cell.iso) ?? []} isGenerated={isGenerated}
+              purpose={purpose} onOpenDay={setDetailDay} />
           ))}
           {dayMap.size === 0 && (
-            <p className="hint mobile-cal-empty">이 달에 등록된 키워드가 없습니다.</p>
+            <p className="hint mobile-cal-empty">
+              {isPlanner ? '이 달에 등록된 할 일이 없습니다.' : '이 달에 등록된 키워드가 없습니다.'}
+            </p>
           )}
         </div>
       ) : (
@@ -128,7 +162,9 @@ function CalendarBody({
               today={today}
               items={dayMap.get(cell.iso) ?? []}
               isGenerated={isGenerated}
+              purpose={purpose}
               onRun={onRun}
+              onToggleComplete={onToggleComplete}
               onOpenDay={setDetailDay}
             />
           ))}
@@ -141,7 +177,10 @@ function CalendarBody({
           today={today}
           items={detailItems}
           isGenerated={isGenerated}
+          purpose={purpose}
           onRun={onRun}
+          onToggleComplete={onToggleComplete}
+          onQuickAdd={onQuickAdd}
           onClose={() => setDetailDay(null)}
         />
       )}

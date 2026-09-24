@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findGeneratedColumn } from '../statusColumns'
+import { findGeneratedColumn, findCompletionColumn } from '../statusColumns'
 import type { StatusColumn } from '../../repo/types'
 
 function col(over: Partial<StatusColumn>): StatusColumn {
@@ -37,5 +37,24 @@ describe('findGeneratedColumn', () => {
   it('returns null when there is no default column', () => {
     expect(findGeneratedColumn([col({ id: '1', name: 'Adobe', isDefault: false })])).toBeNull()
     expect(findGeneratedColumn([])).toBeNull()
+  })
+})
+
+describe('findCompletionColumn', () => {
+  it('matches the column named 완료 (Planner default)', () => {
+    const cols = [col({ id: '1', name: '완료', order: 0, isDefault: true })]
+    expect(findCompletionColumn(cols)?.id).toBe('1')
+  })
+
+  it('falls back to the first default column when 완료 was renamed', () => {
+    const cols = [
+      col({ id: '1', name: 'Done', order: 0, isDefault: true }),
+      col({ id: '2', name: 'Tag', order: 1, isDefault: false }),
+    ]
+    expect(findCompletionColumn(cols)?.id).toBe('1')
+  })
+
+  it('returns null when there is no default column', () => {
+    expect(findCompletionColumn([])).toBeNull()
   })
 })
