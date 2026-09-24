@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeywordItem, PlanPurpose } from '../repo/types'
 
-const MAX_RESULTS = 25
+const MAX_RESULTS = 50
 
 /**
  * Full-plan search — separate from the Toolbar's in-list-view search/filter
@@ -91,6 +91,7 @@ export function PlanSearch({
             <p className="plan-search-empty">현재 계획에서 검색 결과가 없습니다.</p>
           ) : (
             <>
+              <p className="plan-search-count">검색 결과 {results.length}개</p>
               <ul className="plan-search-list">
                 {results.slice(0, MAX_RESULTS).map((item) => (
                   <li key={item.id}>
@@ -108,7 +109,12 @@ export function PlanSearch({
                   </li>
                 ))}
               </ul>
-              <p className="plan-search-count">총 {results.length}개 결과</p>
+              {results.length > MAX_RESULTS && (
+                <p className="plan-search-limit-notice">
+                  총 {results.length}개 중 {MAX_RESULTS}개만 표시합니다. 검색어를 더 구체적으로
+                  입력하세요.
+                </p>
+              )}
             </>
           )}
         </div>

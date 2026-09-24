@@ -283,6 +283,50 @@ async function seedLegacyProductionState(page, legacyPlanName, plannerPlanName) 
   )
 }
 
+/**
+ * Directly writes N extra `keywords` rows for an existing plan (bypassing
+ * the slow "+ 날짜 추가" UI flow) so Plan-search large-result-set scenarios
+ * don't need 50+ real UI interactions. Same raw-IndexedDB technique as
+ * `seedLegacyProductionState`, but additive (no `.clear()`) — the caller
+ * reloads afterward so Dexie's liveQuery (which only reacts to Dexie-
+ * mediated writes) picks the rows up.
+ */
+async function bulkSeedKeywords(page, planId, count, textPrefix) {
+  await page.evaluate(
+    async ({ planId, count, textPrefix }) => {
+      const openDb = () =>
+        new Promise((resolve, reject) => {
+          const req = indexedDB.open('stock-planner')
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+        })
+      const db = await openDb()
+      const tx = db.transaction(['keywords'], 'readwrite')
+      const store = tx.objectStore('keywords')
+      const now = new Date().toISOString()
+      for (let i = 0; i < count; i++) {
+        const day = String((i % 27) + 1).padStart(2, '0')
+        store.put({
+          id: 'bulk-' + i + '-' + Math.random().toString(36).slice(2),
+          workspaceId: 'local',
+          planId,
+          period: `2027-01-${day}`,
+          keyword: `${textPrefix} ${i}`,
+          sortOrder: i,
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      })
+      db.close()
+    },
+    { planId, count, textPrefix },
+  )
+}
+
 function xlsxFile(aoa) {
   const ws = XLSX.utils.aoa_to_sheet(aoa)
   const wb = XLSX.utils.book_new()
@@ -1481,6 +1525,75 @@ const run = async () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
     if (overflow > 2) throw new Error('horizontal overflow of ' + overflow + 'px')
+  })
+
+  await test('Plan 검색: 결과 50개 초과 → count 표시 + 렌더 50개 제한 + 초과 안내 + max-height/scroll (desktop+mobile)', async (page) => {
+    await boot(page)
+    await newPlan(page, 'Search Large Result Test')
+    await page.locator('.plan-select').waitFor()
+    const planId = await page.locator('.plan-select').inputValue()
+
+    await bulkSeedKeywords(page, planId, 62, 'BulkMatchTarget')
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    await page.locator('.plan-select').selectOption({ value: planId })
+    // The bulk-seeded rows land in Jan 2027, off whatever month the list
+    // view happens to default to — search itself is month-independent, so
+    // just wait for the search box (not list content) before typing.
+    await page.locator('.plan-search-input').waitFor()
+
+    await page.locator('.plan-search-input').fill('bulkmatchtarget')
+    const countEl = page.locator('.plan-search-count')
+    await countEl.waitFor()
+    const countText = (await countEl.innerText()).trim()
+    if (countText !== '검색 결과 62개') throw new Error('result count header: ' + countText)
+
+    const rendered = await page.locator('.plan-search-result').count()
+    if (rendered !== 50) throw new Error('rendered result rows should cap at 50, got ' + rendered)
+
+    const noticeText = (await page.locator('.plan-search-limit-notice').innerText()).trim()
+    if (!noticeText.includes('62') || !noticeText.includes('50'))
+      throw new Error('limit notice text: ' + noticeText)
+
+    const panel = page.locator('.plan-search-results')
+    const maxHeightPx = await panel.evaluate((el) => parseInt(getComputedStyle(el).maxHeight, 10))
+    if (maxHeightPx > 400) throw new Error('desktop panel max-height too large: ' + maxHeightPx)
+    const scrollable = await page
+      .locator('.plan-search-list')
+      .evaluate((el) => el.scrollHeight > el.clientHeight)
+    if (!scrollable) throw new Error('result list should be internally scrollable with 50 rows')
+
+    // same open panel, switched to mobile viewport: height clamps to ~48vh, no page overflow
+    await page.setViewportSize({ width: 375, height: 780 })
+    await page.waitForTimeout(150)
+    await page.locator('.plan-search-result').first().waitFor()
+    const panelBox = await panel.boundingBox()
+    if (panelBox.height > 780 * 0.55)
+      throw new Error('mobile panel height not clamped: ' + panelBox.height)
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
+    if (overflow > 2) throw new Error('mobile horizontal overflow: ' + overflow)
+  })
+
+  await test('Plan 검색: 결과 50개 이하 → 초과 안내 없음 (regression)', async (page) => {
+    await boot(page)
+    await newPlan(page, 'Search Small Result Test')
+    await page.locator('.plan-select').waitFor()
+    const planId = await page.locator('.plan-select').inputValue()
+
+    await bulkSeedKeywords(page, planId, 12, 'SmallMatchTarget')
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    await page.locator('.plan-select').selectOption({ value: planId })
+    await page.locator('.plan-search-input').waitFor()
+
+    await page.locator('.plan-search-input').fill('smallmatchtarget')
+    await page.locator('.plan-search-result').first().waitFor()
+    const rendered = await page.locator('.plan-search-result').count()
+    if (rendered !== 12) throw new Error('expected 12 rendered results, got ' + rendered)
+    if (await page.locator('.plan-search-limit-notice').count())
+      throw new Error('limit notice must not show when results <= 50')
   })
 
   await browser.close()

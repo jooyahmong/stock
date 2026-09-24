@@ -189,8 +189,15 @@ input[type='radio'] {
   border-radius: 6px;
   box-shadow: var(--shadow);
   z-index: 20;
-  max-height: 360px;
-  overflow-y: auto;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+@media (max-width: 640px) {
+  .plan-search-results {
+    max-height: 48vh;
+  }
 }
 .plan-search-empty {
   padding: 12px;
@@ -202,6 +209,9 @@ input[type='radio'] {
   list-style: none;
   margin: 0;
   padding: 4px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .plan-search-result {
   display: flex;
@@ -230,11 +240,21 @@ input[type='radio'] {
   white-space: nowrap;
 }
 .plan-search-count {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-mute);
+  border-bottom: 1px solid var(--border);
+}
+.plan-search-limit-notice {
+  flex: 0 0 auto;
   padding: 6px 8px;
   margin: 0;
   font-size: 11px;
   color: var(--text-mute);
   border-top: 1px solid var(--border);
+  background: var(--bg-soft);
 }
 
 /* ---------- plan bar ---------- */

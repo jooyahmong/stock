@@ -109,7 +109,13 @@ untouched by this feature):
 - **Match rule:** case-insensitive substring, trimmed. No fuzzy matching, no
   ranking beyond `(period, sortOrder)` — the same order `getPlanSnapshot`
   already returns keywords in, so filtering preserves it for free.
-- Results are capped at the first 25 with a "총 N개 결과" count; there is no
+- The result panel is a fixed-height dropdown right under the search box,
+  never a page-pushing block: `max-height` ~380px on desktop, ~48vh on
+  mobile (≤640px), with the result list scrolling internally while a "검색
+  결과 N개" count header and (when truncated) a limit-notice footer stay put.
+  Rendering is capped at the first 50 matches — the full match count still
+  shows in the header even when it exceeds that; a footer note
+  ("총 N개 중 50개만 표시합니다…") only appears past the cap. There is no
   "load more" — this is a quick jump tool, not a second list view.
 - **Clicking a result never edits or generates anything** — it's pure
   navigation: switches to that period's month and, in Calendar view, opens

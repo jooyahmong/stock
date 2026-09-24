@@ -12,8 +12,10 @@ _Nothing in progress right now._
 
 ### Plan search (header search box)
 
-- **Status:** `IMPLEMENTED`. Not yet committed as of this entry — see git
-  status. Full behavior in `docs/UI_RULES.md` → "Plan search".
+- **Status:** `IMPLEMENTED`, committed (`58eca19`) and deployed to
+  production, plus a follow-up large-result UX fix (see below, not yet
+  committed as of this entry — check git status). Full behavior in
+  `docs/UI_RULES.md` → "Plan search".
 - **What shipped:** `src/components/PlanSearch.tsx`, rendered in `App.tsx`'s
   header next to the subtitle. Searches every item (keyword or task text) in
   the currently active plan only — full-plan scope, not month-scoped, and
@@ -25,14 +27,25 @@ _Nothing in progress right now._
   scrolls to and briefly highlights that date's `PeriodGroup` (new `id`/
   `highlighted` prop). Shared between Stock and Planner, no purpose-specific
   logic beyond wording. Unrelated to and doesn't touch the Toolbar's existing
-  month-scoped list search/filter.
+  month-scoped list search/filter. Escape's native `type="search"`
+  "clear value" default action is blocked (`e.preventDefault()`) so Escape
+  only closes the panel, keeping the query for refocus.
+- **Large-result UX follow-up:** result panel is a fixed-height dropdown
+  (`max-height` ~380px desktop / ~48vh mobile) with only the list scrolling
+  internally — it never pushes the page down. A "검색 결과 N개" count header
+  always shows the true match count; rendering itself caps at 50 rows, with
+  a footer notice ("총 N개 중 50개만 표시합니다…") appearing only past that
+  cap. Sorting/navigation/lifecycle (Clear/Esc/plan-switch/isolation)
+  unchanged.
 - **Verification:** `tsc -p . --noEmit` clean; unit 131/131 (unchanged — no
   new unit-testable pure logic, the substring filter is trivial and covered
-  by E2E); production build clean; 5 new Plan-search E2E scenarios (isolation
-  + query-clear-on-plan-switch + empty-result wording, case-insensitive +
-  off-screen-month scope, click-to-navigate for both views + highlight,
-  Planner task-text search, mobile no-overflow) all pass; full E2E 48/48
-  (7 Direct Generation skips), 0 Stock/Planner regressions.
+  by E2E); production build clean; 7 Plan-search E2E scenarios total
+  (isolation + query-clear-on-plan-switch + empty-result wording,
+  case-insensitive + off-screen-month scope, click-to-navigate for both
+  views + highlight, Planner task-text search, mobile no-overflow, 62-match
+  render-cap/count/notice/max-height/scroll across desktop+mobile, ≤50-match
+  no-notice regression) all pass; full E2E 50/50 (7 Direct Generation
+  skips), 0 Stock/Planner regressions.
 
 ### Production default-pack audit + additive migration
 
