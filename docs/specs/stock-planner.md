@@ -58,16 +58,21 @@ schema this spec assumes.
 
 ## Default seed pack — rolling 365 days
 
-A brand-new install seeds one plan, "365 스톡 키워드", automatically on first
-run (`src/repo/dexie/seed.ts`, marker `seed:marker = rolling-365-v2`;
-`src/data/defaultStockKeywords/`).
+A brand-new install seeds one plan, **"2027 Stock Keywords"**, automatically
+on first run (`src/repo/dexie/seed.ts`, marker `seed:marker =
+rolling-365-v2`; `src/data/defaultStockKeywords/`). The name is fixed text,
+not year-parametrized — it says "2027" because that's the year most of a
+pack seeded "today" actually displays, not because `buildDefaultStockPlan`
+takes a year (it takes a `startIso` date string).
 
 - **Empty DB (any build):** creates the seed plan.
 - **Dev-only reset** (`import.meta.env.DEV`): if stale dev sample data from
   an older seed marker is found, wipes all tables and reseeds. **Never runs
   in a production build** — a real user's data is never touched by bumping
   the seed version.
-- **Production with existing data:** untouched, no matter the seed version.
+- **Production with existing data:** untouched by this marker, no matter the
+  seed version — see "Default pack, additively" below for the *separate*
+  mechanism that still gets these browsers the pack.
 - Start date = local "today" at seeding time; 365 consecutive days, **2
   keywords/day, 730 rows total**, never merged.
 - Display date = *production date*; it targets roughly 61 days
@@ -92,6 +97,33 @@ run (`src/repo/dexie/seed.ts`, marker `seed:marker = rolling-365-v2`;
 - All status columns start unchecked (seeding never writes `KeywordStatus`
   rows).
 - Once seeded, rows behave exactly like any other keyword — fully editable.
+
+## Default pack, additively (`ensureDefaultPack`, `seed:defaultPack` marker)
+
+A separate, **purely additive** pass in `src/repo/dexie/seed.ts` runs after
+the above on every load. It exists for browsers that already had a Plan
+(of any kind — including one not created by this app's seeding, e.g. one
+made through the normal "새 계획" UI) before this pack existed — those
+browsers permanently skip the main seed path (see "Production with existing
+data" above), so without this second pass they'd never get the default pack
+at all. This is exactly what was observed on `stock.woojooland.com`
+(see `docs/DECISIONS.md`).
+
+- Marker: `seed:defaultPack = stock-default-pack:2027:v1`, independent of
+  `seed:marker`.
+- If a Plan named exactly `"2027 Stock Keywords"` with `purpose: 'stock'`
+  already exists, does nothing (belt-and-suspenders alongside the marker).
+- Otherwise creates it (same `createDefaultPlan` used by the main path),
+  **without reading, modifying, or deleting any other Plan.** It does not
+  force-activate the new plan (`AppSetting['ui:activePlanId']`) — `main.tsx`
+  doesn't wait for seeding before rendering, so the plan-selection effect in
+  `App.tsx` can already have locked onto an existing plan by the time this
+  finishes, and a late write there wouldn't be picked up (that effect only
+  re-evaluates while no valid `activePlanId` is set yet). The new plan
+  becomes selectable from the plan dropdown; it isn't forced open.
+- **There is no logic anywhere that deletes a Plan it cannot positively
+  identify as this app's own seed output.** If a browser has unrelated
+  Plans, they are left exactly as they were, forever.
 
 ## Explicitly out of scope for this spec
 

@@ -5,6 +5,45 @@ A log of decisions that aren't obvious from reading the code alone — mostly
 group. Exact dates/authorship are in `git log`; this file captures the
 reasoning that commit messages alone don't carry.
 
+## Seeding
+
+- **Default pack renamed "365 스톡 키워드" → "2027 Stock Keywords".** Purely
+  cosmetic — no behavior tied to the string. Kept as one fixed name rather
+  than year-parametrized because a shifting name would break the
+  `alreadyExists` name-match in `ensureDefaultPack` (below) across a
+  calendar-year boundary and isn't worth the complexity for a personal tool.
+- **A stale-plan production bug led to an additive-only second seed pass,
+  not a "clean up legacy data" one.** `stock.woojooland.com` showed Plans
+  named "365 재구성" / "데일리 작업" instead of the expected default pack.
+  Audited `git log -p` on `seed.ts` and the full working tree: **those names
+  have never existed in this codebase, at any point in its history.** They
+  aren't identifiable dev/sample data — they were almost certainly created
+  through the ordinary "+ 새 계획" UI (by real use of the live site). Given
+  that, deleting them would risk destroying real work under the banner of
+  "cleanup," which the data-safety principle in `docs/PROJECT.md` (no login,
+  local-only, the user's data is the user's) rules out.
+  - The actual root cause was structural, not data-related: `runSeedOnce`
+    permanently disables itself (writes its marker) the moment it observes
+    *any* existing Plan on a production browser, by design — see "Production
+    with existing data: untouched" in `docs/specs/stock-planner.md`. A
+    browser that had so much as one Plan before the default pack existed
+    would never get it, no matter how many times the seed version was
+    bumped.
+  - Fix: `ensureDefaultPack`, a second pass with its **own** marker
+    (`seed:defaultPack`) that only ever *adds* — it checks whether a Plan
+    named exactly `"2027 Stock Keywords"` (purpose `stock`) exists and
+    creates one if not, **never reading further into, modifying, or
+    deleting any other Plan**, regardless of its name or purpose. This also
+    means General Planner Plans (`purpose: 'planner'`) are safe by
+    construction — there's no code path that could touch them, not a
+    special case that has to remember to skip them.
+  - If a future audit *can* positively identify specific data as this app's
+    own dev/sample output (e.g. a Plan name string that still exists in
+    `seed.ts`'s history and nowhere else), a targeted, code-referenced
+    cleanup is reasonable. Deleting data whose origin can't be proven from
+    code is not — see `docs/specs/stock-planner.md` → "Default pack,
+    additively" for what actually shipped instead.
+
 ## Storage & sync
 
 - **Repository interface over a direct Firebase/vendor SDK.** V1 uses

@@ -217,6 +217,72 @@ async function boot(page) {
   SEED_D = d
 }
 
+/**
+ * Simulates a production browser that already has other Plans (one legacy
+ * pre-`purpose`-field Plan + one General Planner Plan) and the *original*
+ * seed marker already set — i.e. `runSeedOnce`'s "production + existing
+ * data: don't touch" branch already ran once and permanently disabled
+ * itself, exactly the real-world state this migration fixes. Writes
+ * directly to IndexedDB (bypassing the app) so the *next* load exercises
+ * `ensureDefaultPack` from a cold start; the caller reloads afterward.
+ */
+async function seedLegacyProductionState(page, legacyPlanName, plannerPlanName) {
+  await page.goto(BASE, { waitUntil: 'networkidle' }) // ensure the DB/schema exists
+  await page.evaluate(
+    async ({ legacyPlanName, plannerPlanName }) => {
+      const openDb = () =>
+        new Promise((resolve, reject) => {
+          // No version pin: Dexie internally multiplies its declared schema
+          // version (1) by 10, so opening at raw version 1 here throws a
+          // VersionError against Dexie's already-created v10 database.
+          // Opening version-less attaches to whatever version already exists.
+          const req = indexedDB.open('stock-planner')
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+        })
+      const db = await openDb()
+      const stores = ['plans', 'keywords', 'statusColumns', 'keywordStatus', 'generators', 'settings']
+      const tx = db.transaction(stores, 'readwrite')
+      for (const s of stores) tx.objectStore(s).clear()
+
+      const now = new Date().toISOString()
+      const legacyId = 'legacy-' + Math.random().toString(36).slice(2)
+      const plannerId = 'planner-' + Math.random().toString(36).slice(2)
+
+      // Pre-`purpose`-field legacy Plan (no `purpose` key at all).
+      tx.objectStore('plans').put({
+        id: legacyId, workspaceId: 'local', name: legacyPlanName, type: '365',
+        createdAt: now, updatedAt: now,
+      })
+      tx.objectStore('statusColumns').put({
+        id: legacyId + '-c1', workspaceId: 'local', planId: legacyId, name: '생성',
+        order: 0, isVisible: true, isDefault: true, createdAt: now,
+      })
+
+      // A real General Planner Plan — must survive untouched.
+      tx.objectStore('plans').put({
+        id: plannerId, workspaceId: 'local', name: plannerPlanName, type: '365',
+        purpose: 'planner', createdAt: now, updatedAt: now,
+      })
+      tx.objectStore('statusColumns').put({
+        id: plannerId + '-c1', workspaceId: 'local', planId: plannerId, name: '완료',
+        order: 0, isVisible: true, isDefault: true, createdAt: now,
+      })
+
+      // The *original* seed marker only — simulates it having already run
+      // once while a Plan existed. `seed:defaultPack` is deliberately absent.
+      tx.objectStore('settings').put({ key: 'seed:marker', value: 'rolling-365-v2' })
+
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      })
+      db.close()
+    },
+    { legacyPlanName, plannerPlanName },
+  )
+}
+
 function xlsxFile(aoa) {
   const ws = XLSX.utils.aoa_to_sheet(aoa)
   const wb = XLSX.utils.book_new()
@@ -254,11 +320,11 @@ const run = async () => {
     await page.locator('.cal-grid').waitFor()
   })
 
-  await test('seed = "365 스톡 키워드": current-month rows, 2 kw/day, no sample data', async (page) => {
+  await test('seed = "2027 Stock Keywords": current-month rows, 2 kw/day, no sample data', async (page) => {
     await boot(page)
     // The only plan is the rolling default pack (early sample plan is gone).
     const planLabel = await page.locator('.plan-current').innerText()
-    if (!planLabel.includes('365 스톡 키워드'))
+    if (!planLabel.includes('2027 Stock Keywords'))
       throw new Error('plan label: ' + JSON.stringify(planLabel))
     for (const bad of ['떡국', '일출', '복주머니', '겨울여행']) {
       if (await page.getByRole('button', { name: bad, exact: true }).count())
@@ -277,6 +343,43 @@ const run = async () => {
     if (periods.some((period) => !period.startsWith(selectedMonth)))
       throw new Error('list contains a period outside selected month: ' + periods.join(', '))
     if (!/[가-힣]/.test(SEED_A)) throw new Error('seed keyword not Korean: ' + SEED_A)
+  })
+
+  await test('기본 팩 마이그레이션: 기존/Planner Plan 보존 + "2027 Stock Keywords" 1회만 추가, 재로드해도 중복 없음', async (page) => {
+    await seedLegacyProductionState(page, '365 재구성', '데일리 작업')
+    await page.reload({ waitUntil: 'networkidle' })
+    // Whichever plan the app lands on first, the plan picker itself renders
+    // as soon as `listPlans()` resolves — don't wait on keyword rows, since
+    // the pre-existing legacy/planner plans in this scenario legitimately
+    // have none.
+    const select = page.locator('.plan-select')
+    await select.waitFor({ timeout: 15000 })
+    await page.waitForTimeout(300)
+
+    const optionTexts = await select.locator('option').allInnerTexts()
+    if (optionTexts.length !== 3)
+      throw new Error('expected exactly 3 plans after migration, got: ' + JSON.stringify(optionTexts))
+    if (!optionTexts.some((t) => t === '365 재구성'))
+      throw new Error('pre-existing (non-purpose) plan was not preserved: ' + JSON.stringify(optionTexts))
+    if (!optionTexts.some((t) => t.includes('데일리 작업') && t.includes('일정')))
+      throw new Error('General Planner plan was not preserved (or lost its purpose): ' + JSON.stringify(optionTexts))
+    const packMatches = optionTexts.filter((t) => t === '2027 Stock Keywords')
+    if (packMatches.length !== 1)
+      throw new Error('expected exactly one "2027 Stock Keywords" plan, got: ' + JSON.stringify(optionTexts))
+
+    // Selecting it shows the real seeded content (current-month keywords).
+    await select.selectOption({ label: '2027 Stock Keywords' })
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    await page.locator('.period-group .kw-text').first().waitFor({ timeout: 15000 })
+
+    // Reload twice more: no duplicate pack, nothing else lost or re-created.
+    for (let i = 0; i < 2; i++) {
+      await page.reload({ waitUntil: 'networkidle' })
+      await page.locator('.plan-select').waitFor()
+      const after = await page.locator('.plan-select option').allInnerTexts()
+      if (after.length !== 3 || after.filter((t) => t === '2027 Stock Keywords').length !== 1)
+        throw new Error(`reload #${i + 1} duplicated or lost a plan: ` + JSON.stringify(after))
+    }
   })
 
   await test('list window: selected month is fully shown without legacy expansion controls', async (page) => {

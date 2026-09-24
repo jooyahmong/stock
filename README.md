@@ -225,11 +225,15 @@ Planner 상단 `[달력 보기] [목록 보기]` 토글. 달력이 기본 메인
 
 ## 기본 스톡 키워드 팩 — 오늘부터 365일 (롤링)
 
-새 사용자는 첫 실행 시 `365 스톡 키워드` 플랜을 자동으로 받는다
+새 사용자는 첫 실행 시 `2027 Stock Keywords` 플랜을 자동으로 받는다
 (`src/data/defaultStockKeywords/`, 컴포넌트에 하드코딩하지 않음).
 
 **시딩 방식** (`src/repo/dexie/seed.ts`, 마커 `seed:marker = rolling-365-v2`):
 - **빈 DB (모든 빌드)**: 기본 플랜 생성.
+- **기존 Plan이 있던 프로덕션 브라우저**: 위 경로는 건드리지 않지만, 별도
+  마커(`seed:defaultPack`)의 `ensureDefaultPack`가 다른 Plan은 절대 건드리지
+  않고 `2027 Stock Keywords`가 없을 때만 1회 추가한다 — 자세한 내용과
+  판단 근거는 `docs/specs/stock-planner.md`, `docs/DECISIONS.md` 참고.
 - **개발용 초기화 (`import.meta.env.DEV` 한정)**: 이전 개발용 샘플 데이터(구 마커 +
   플랜 존재)가 남아 있으면 전 테이블을 비우고 기본 팩으로 교체. **프로덕션 빌드에서는
   절대 실행되지 않음** → 실제 사용자 데이터는 seed 버전 상향만으로 삭제되지 않는다.
