@@ -10,6 +10,11 @@ import * as XLSX from 'xlsx'
 
 const BASE = process.env.BASE_URL || 'http://localhost:5173'
 const GPT_URL = 'https://chatgpt.com/g/g-smoke-test'
+const FIRST_AVAILABLE_MONTH = '2026-09'
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
 const results = []
 let browser
 
@@ -28,6 +33,74 @@ const ymd = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
     d.getDate(),
   ).padStart(2, '0')}`
+
+function monthFromTitle(title) {
+  const [name, year] = title.trim().split(/\s+/)
+  const month = MONTH_NAMES.indexOf(name) + 1
+  if (!month || !/^\d{4}$/.test(year)) throw new Error(`unrecognized month title: ${title}`)
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+async function goToMonth(page, targetMonth) {
+  if (!/^\d{4}-\d{2}$/.test(targetMonth)) throw new Error(`bad target month: ${targetMonth}`)
+  if (targetMonth < FIRST_AVAILABLE_MONTH)
+    throw new Error(`target month ${targetMonth} is before ${FIRST_AVAILABLE_MONTH}`)
+
+  const title = page.locator('.cal-title')
+  await title.waitFor()
+  for (let attempt = 0; attempt < 36; attempt++) {
+    const currentMonth = monthFromTitle(await title.innerText())
+    if (currentMonth === targetMonth) return
+    const direction = currentMonth < targetMonth ? '다음 달' : '이전 달'
+    const button = page.getByRole('button', { name: direction })
+    if (await button.isDisabled())
+      throw new Error(`${direction} is disabled at ${currentMonth}; target=${targetMonth}`)
+    await button.click()
+    await page.waitForTimeout(80)
+  }
+  throw new Error(`could not navigate to month ${targetMonth}`)
+}
+
+function accessiblePastIso(preferredDay) {
+  const now = new Date()
+  const currentMonth = ymd(now).slice(0, 7)
+  if (currentMonth > FIRST_AVAILABLE_MONTH) {
+    return ymd(new Date(now.getFullYear(), now.getMonth() - 1, preferredDay))
+  }
+  const day = Math.min(preferredDay, now.getDate() - 1)
+  if (day < 1) throw new Error('no past date exists inside the first available month')
+  return `${FIRST_AVAILABLE_MONTH}-${String(day).padStart(2, '0')}`
+}
+
+async function openCalendarMonth(page, month) {
+  await page.getByRole('tab', { name: '달력 보기', exact: true }).click()
+  await goToMonth(page, month)
+  await page.locator('.cal-grid, .mobile-cal-grid').waitFor()
+}
+
+async function addCustomGenerator(page, name, url, makeDefault = true) {
+  const rows = page.locator('.gen-row')
+  const before = await rows.count()
+  await page.locator('.gen-add input.field-input').first().fill(name)
+  await page.locator('.gen-add input.field-input').nth(1).fill(url)
+  await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
+  const row = rows.nth(before)
+  await row.waitFor()
+  if ((await row.getByLabel('생성 사이트 이름').inputValue()) !== name)
+    throw new Error(`custom generator row was not added: ${name}`)
+  if (makeDefault) {
+    const radio = row.locator('.gen-default input')
+    await radio.click()
+    await page.waitForFunction(
+      ({ siteName }) => {
+        const selected = document.querySelector('.gen-row input[name="default-generator"]:checked')
+        return selected?.closest('.gen-row')?.querySelector('[aria-label="생성 사이트 이름"]')?.value === siteName
+      },
+      { siteName: name },
+    )
+  }
+  return row
+}
 
 // V1: 계획 유형 선택 없음 — 모든 계획은 날짜(365) 기반. purpose 만 고른다(기본 Stock).
 async function newPlan(page, name) {
@@ -51,6 +124,8 @@ async function newPlannerPlan(page, name) {
 
 /** Add one keyword on an exact date via the list view (+ 날짜 추가 → + 키워드 추가). */
 async function addKeywordOnDate(page, dateIso, keyword) {
+  const targetMonth = dateIso.slice(0, 7)
+  await goToMonth(page, targetMonth)
   await page.getByRole('button', { name: '+ 날짜 추가' }).click()
   await page.locator('.modal .field-input').fill(dateIso)
   await page.locator('.modal').getByRole('button', { name: '추가' }).click()
@@ -69,6 +144,7 @@ async function addKeywordOnDate(page, dateIso, keyword) {
 
 /** Same as addKeywordOnDate, but for a Planner plan's "+ 할 일 추가" add-row. */
 async function addTaskOnDate(page, dateIso, task) {
+  await goToMonth(page, dateIso.slice(0, 7))
   await page.getByRole('button', { name: '+ 날짜 추가' }).click()
   await page.locator('.modal .field-input').fill(dateIso)
   await page.locator('.modal').getByRole('button', { name: '추가' }).click()
@@ -178,7 +254,7 @@ const run = async () => {
     await page.locator('.cal-grid').waitFor()
   })
 
-  await test('seed = "365 스톡 키워드": 365 groups, 2 kw/day, no sample data', async (page) => {
+  await test('seed = "365 스톡 키워드": current-month rows, 2 kw/day, no sample data', async (page) => {
     await boot(page)
     // The only plan is the rolling default pack (early sample plan is gone).
     const planLabel = await page.locator('.plan-current').innerText()
@@ -192,45 +268,42 @@ const run = async () => {
       if (!kw) throw new Error('seed keyword not captured')
       await page.getByRole('button', { name: kw, exact: true }).first().waitFor()
     }
-    // list is windowed by default (short); "전체 N일 보기" reveals all 365/730
-    const windowedGroups = await page.locator('.period-group').count()
-    if (windowedGroups > 40)
-      throw new Error('default list should be windowed, got ' + windowedGroups)
-    await page.getByRole('button', { name: /전체 \d+일 보기/ }).click()
-    await page.waitForTimeout(400)
-    const groupCount = await page.locator('.period-group').count()
-    if (groupCount !== 365)
-      throw new Error('expected 365 day-groups after 전체 보기, got ' + groupCount)
-    const rowCount = await page.locator('.kw-row').count()
-    if (rowCount !== 730) throw new Error('expected 730 keyword rows, got ' + rowCount)
+    // The list is month-scoped. Full 365-day/730-row validation belongs to the
+    // seed unit suite, not to a single rendered month in E2E.
+    const selectedMonth = monthFromTitle(await page.locator('.cal-title').innerText())
+    const periods = await page.locator('.period-group .pg-sub').allInnerTexts()
+    if (periods.length < 1 || periods.length > 31)
+      throw new Error('expected one selected month of seed groups, got ' + periods.length)
+    if (periods.some((period) => !period.startsWith(selectedMonth)))
+      throw new Error('list contains a period outside selected month: ' + periods.join(', '))
     if (!/[가-힣]/.test(SEED_A)) throw new Error('seed keyword not Korean: ' + SEED_A)
   })
 
-  await test('list window: 기본 슬라이스 + 이후 더 보기 ▼ + 전체 보기 토글 + 검색 우회', async (page) => {
+  await test('list window: selected month is fully shown without legacy expansion controls', async (page) => {
     await boot(page)
-    const n0 = await page.locator('.period-group').count()
-    if (n0 < 8 || n0 > 30) throw new Error('unexpected default window size: ' + n0)
+    const startMonth = monthFromTitle(await page.locator('.cal-title').innerText())
+    const periods = await page.locator('.period-group .pg-sub').allInnerTexts()
+    if (periods.length < 1 || periods.some((period) => !period.startsWith(startMonth)))
+      throw new Error('selected-month list mismatch: ' + periods.join(', '))
+    if (await page.locator('.list-more-btn').count())
+      throw new Error('legacy 이후 더 보기 control must not exist')
+    if (await page.getByRole('button', { name: /전체 \d+일 보기|오늘부터 보기/ }).count())
+      throw new Error('legacy 전체 보기 controls must not exist')
 
-    await page.locator('.list-more-btn').click() // "이후 더 보기 ▼"
-    await page.waitForTimeout(300)
-    const n1 = await page.locator('.period-group').count()
-    if (n1 <= n0) throw new Error('이후 더 보기 did not add groups')
-
-    await page.getByRole('button', { name: /전체 \d+일 보기/ }).click()
-    await page.waitForTimeout(500)
-    if ((await page.locator('.period-group').count()) !== 365)
-      throw new Error('전체 보기 should show all 365 groups')
-
-    await page.getByRole('button', { name: '오늘부터 보기' }).click()
-    await page.waitForTimeout(300)
-    if ((await page.locator('.period-group').count()) > 40)
-      throw new Error('접기 should return to the windowed slice')
-
-    // search bypasses the window entirely
+    // Search remains scoped to the selected month and does not restore legacy controls.
     await page.locator('.search').fill(SEED_A)
     await page.waitForTimeout(300)
+    await page.getByRole('button', { name: SEED_A, exact: true }).waitFor()
     if (await page.locator('.list-more-btn').count())
       throw new Error('window controls should hide while searching')
+    await page.locator('.search').fill('')
+
+    await page.getByRole('button', { name: '다음 달' }).click()
+    const nextMonth = monthFromTitle(await page.locator('.cal-title').innerText())
+    if (nextMonth === startMonth) throw new Error('month picker did not advance')
+    const nextPeriods = await page.locator('.period-group .pg-sub').allInnerTexts()
+    if (nextPeriods.length < 1 || nextPeriods.some((period) => !period.startsWith(nextMonth)))
+      throw new Error('next-month list mismatch: ' + nextPeriods.join(', '))
   })
 
   await test('work-status check persists across reload (IndexedDB)', async (page) => {
@@ -397,14 +470,6 @@ const run = async () => {
 
   await test('Excel import: Full Export 를 그대로 재import → 개수 불변 (더블 안 생김)', async (page) => {
     await boot(page)
-    const expandAll = async () => {
-      const btn = page.getByRole('button', { name: /전체 \d+일 보기/ })
-      if (await btn.count()) {
-        await btn.click()
-        await page.waitForTimeout(400)
-      }
-    }
-    await expandAll()
     const before = await page.locator('.kw-row').count()
 
     const [dl] = await Promise.all([
@@ -432,7 +497,6 @@ const run = async () => {
     await page.getByRole('button', { name: '가져오기' }).click()
     await page.waitForTimeout(600)
 
-    await expandAll()
     const after = await page.locator('.kw-row').count()
     if (after !== before) throw new Error(`row count changed ${before} -> ${after}`)
   })
@@ -461,6 +525,7 @@ const run = async () => {
     if (!statsText.includes('오류')) throw new Error('expected error count shown')
     await page.getByRole('button', { name: '가져오기' }).click()
     await page.waitForTimeout(300)
+    await goToMonth(page, '2027-03')
     await page.getByRole('button', { name: '봄나들이', exact: true }).waitFor()
     const march01 = page.locator('.period-group', { hasText: 'MAR 01' })
     if ((await march01.locator('.kw-row').count()) !== 2)
@@ -473,9 +538,7 @@ const run = async () => {
     // configure a 내 생성 사이트 generator
     await page.getByRole('button', { name: '⚙ 설정' }).click()
     await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
-    await page.locator('.gen-add input.field-input').first().fill('Test GPT')
-    await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
-    await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
+    await addCustomGenerator(page, 'Test GPT', GPT_URL)
     await page.keyboard.press('Escape')
 
     const popupPromise = context.waitForEvent("page", { timeout: 12000 }).catch(() => null)
@@ -494,9 +557,7 @@ const run = async () => {
     await boot(page)
     await page.getByRole('button', { name: '⚙ 설정' }).click()
     await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
-    await page.locator('.gen-add input.field-input').first().fill('T GPT')
-    await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
-    await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
+    await addCustomGenerator(page, 'T GPT', GPT_URL)
     await page.keyboard.press('Escape')
 
     let opened = 0
@@ -535,6 +596,11 @@ const run = async () => {
     const urlInput = page.locator('.gen-add input.field-input').nth(1)
     const addBtn = page.locator('.gen-add').getByRole('button', { name: '추가' })
 
+    for (const preset of ['ChatGPT', 'Gemini', 'Midjourney']) {
+      const control = page.locator('.gen-preset', { hasText: preset }).locator('input[type="radio"]')
+      await control.waitFor()
+    }
+
     await nameInput.fill('Bad')
     await urlInput.fill('https://user:password@gemini.google.com/app')
     await page.locator('.gen-add .hint-error').waitFor()
@@ -546,23 +612,24 @@ const run = async () => {
     await urlInput.fill('http://chatgpt.com/g/g-x')
     if (!(await addBtn.isDisabled())) throw new Error('http (non-https) must not be saveable')
 
-    await urlInput.fill('https://chatgpt.com/g/g-ok')
+    await nameInput.fill('Custom HTTPS')
+    await urlInput.fill('https://example.com/image-generator')
     await addBtn.click()
-    await page.locator('.gen-row').waitFor()
-    await nameInput.fill('Gemini')
-    await urlInput.fill('https://gemini.google.com/app')
-    await addBtn.click()
-    await page.locator('.gen-row').nth(1).waitFor()
-    await nameInput.fill('Midjourney')
-    await urlInput.fill('https://www.midjourney.com/imagine')
-    await addBtn.click()
-    await page.locator('.gen-row').nth(2).waitFor()
+    const custom = page.locator('.gen-row').last()
+    await custom.waitFor()
+    if ((await custom.getByLabel('생성 사이트 이름').inputValue()) !== 'Custom HTTPS')
+      throw new Error('valid custom HTTPS site was not added')
   })
 
-  await test('keyword click with no generator warns instead of opening', async (page) => {
+  await test('keyword click with no generator warns instead of opening', async (page, context) => {
     await boot(page)
+    const pagesBefore = context.pages().length
     await page.getByRole('button', { name: SEED_A, exact: true }).click()
-    await page.getByText('생성 사이트 주소를 먼저 저장').waitFor()
+    await page.locator('.toast', { hasText: '기본 생성 사이트를 선택하세요' }).waitFor()
+    await page.getByRole('heading', { name: '설정' }).waitFor()
+    await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).waitFor()
+    if (context.pages().length !== pagesBefore)
+      throw new Error('keyword click without a default generator must not open a tab')
   })
 
   // ---- Generation: Direct Generate + 내 생성 사이트 --------------------------------
@@ -630,9 +697,7 @@ const run = async () => {
     await openGenerationTab(page)
     // register 내 생성 사이트
     await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
-    await page.locator('.gen-add input.field-input').first().fill('T GPT')
-    await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
-    await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
+    await addCustomGenerator(page, 'T GPT', GPT_URL)
     // switch default mode to Direct
     await page
       .locator('.gs-radio', { hasText: 'Direct Generate' })
@@ -777,8 +842,7 @@ const run = async () => {
   await test('Calendar: 토글 → 7열 grid, 과거 생성완료 ○ / 미완료 ×', async (page) => {
     await boot(page)
     await newPlan(page, 'Cal Test 1')
-    const now = new Date()
-    const pastIso = ymd(new Date(now.getFullYear(), now.getMonth() - 1, 15))
+    const pastIso = accessiblePastIso(15)
     await addKeywordOnDate(page, pastIso, 'past done')
     await addKeywordOnDate(page, pastIso, 'past miss')
     await page
@@ -788,8 +852,7 @@ const run = async () => {
       .check()
     await page.waitForTimeout(150)
 
-    await page.getByRole('tab', { name: '달력 보기' }).click()
-    await page.locator('.cal-grid').waitFor()
+    await openCalendarMonth(page, pastIso.slice(0, 7))
     const wd = (await page.locator('.cal-wd').allInnerTexts()).join(',')
     if (wd !== 'SUN,MON,TUE,WED,THU,FRI,SAT') throw new Error('weekday header: ' + wd)
 
@@ -814,14 +877,14 @@ const run = async () => {
     await addKeywordOnDate(page, todayIso, 'today kw')
     await addKeywordOnDate(page, nextMonthIso, 'future kw')
 
-    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await openCalendarMonth(page, todayIso.slice(0, 7))
     const todayLine = page.locator('.cal-kw', { hasText: 'today kw' })
     await todayLine.waitFor()
     if ((await todayLine.locator('.cal-mark').count()) !== 0)
       throw new Error('unchecked today keyword must have no O/X')
     await page.locator('.cal-cell-today').waitFor() // today is highlighted
 
-    await page.getByRole('button', { name: '다음 달' }).click()
+    await goToMonth(page, nextMonthIso.slice(0, 7))
     const futureLine = page.locator('.cal-kw', { hasText: 'future kw' })
     await futureLine.waitFor()
     if ((await futureLine.locator('.cal-mark').count()) !== 0)
@@ -829,13 +892,14 @@ const run = async () => {
 
     // 목록으로 돌아가 오늘 키워드 "생성" 체크 → 달력에 즉시 ○
     await page.getByRole('tab', { name: '목록 보기' }).click()
+    await goToMonth(page, todayIso.slice(0, 7))
     await page
       .locator('.kw-row', { hasText: 'today kw' })
       .locator('.status-check', { hasText: '생성' })
       .locator('input')
       .check()
     await page.waitForTimeout(200)
-    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await openCalendarMonth(page, todayIso.slice(0, 7))
     const todayLine2 = page.locator('.cal-kw', { hasText: 'today kw' })
     await todayLine2.waitFor()
     if ((await todayLine2.locator('.cal-mark-done').count()) !== 1)
@@ -845,12 +909,11 @@ const run = async () => {
   await test('Calendar: 긴 키워드는 한 줄 ellipsis, 전체는 title', async (page) => {
     await boot(page)
     await newPlan(page, 'Cal Test 3')
-    const now = new Date()
-    const pastIso = ymd(new Date(now.getFullYear(), now.getMonth() - 1, 12))
+    const pastIso = accessiblePastIso(12)
     const longKw = '어린이집에서 즐기는 가을 가족 나들이 아주 아주 긴 키워드 문자열'
     await addKeywordOnDate(page, pastIso, longKw)
 
-    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await openCalendarMonth(page, pastIso.slice(0, 7))
     const line = page.locator('.cal-kw', { hasText: '어린이집에서' })
     await line.waitFor()
     if ((await line.getAttribute('title')) !== longKw)
@@ -873,18 +936,15 @@ const run = async () => {
     // 내 생성 사이트 so keyword click has a handler
     await page.getByRole('button', { name: '⚙ 설정' }).click()
     await page.getByRole('tab', { name: '생성 사이트 그림을 만들 곳 연결하기', exact: true }).click()
-    await page.locator('.gen-add input.field-input').first().fill('T GPT')
-    await page.locator('.gen-add input.field-input').nth(1).fill(GPT_URL)
-    await page.locator('.gen-add').getByRole('button', { name: '추가' }).click()
+    await addCustomGenerator(page, 'T GPT', GPT_URL)
     await page.keyboard.press('Escape')
 
-    const now = new Date()
-    const pastIso = ymd(new Date(now.getFullYear(), now.getMonth() - 1, 20))
+    const pastIso = accessiblePastIso(20)
     for (const k of ['추석 송편', '한복 가족', '보름달 배경', '성묘 준비', '차례상']) {
       await addKeywordOnDate(page, pastIso, k)
     }
 
-    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await openCalendarMonth(page, pastIso.slice(0, 7))
     const body = page.locator('.cal-cell-body', { hasText: '+2개' })
     await body.waitFor()
     if ((await body.locator('.cal-kw').count()) !== 3)
@@ -921,11 +981,10 @@ const run = async () => {
       .check()
     await page.keyboard.press('Escape')
 
-    const now = new Date()
-    const pastIso = ymd(new Date(now.getFullYear(), now.getMonth() - 1, 8))
+    const pastIso = accessiblePastIso(8)
     await addKeywordOnDate(page, pastIso, 'red apple')
 
-    await page.getByRole('tab', { name: '달력 보기' }).click()
+    await openCalendarMonth(page, pastIso.slice(0, 7))
     await page.locator('.cal-kw', { hasText: 'red apple' }).click()
     // exactly the list view's GenerateModal — proves the handler is reused
     await page.locator('.gen-result img').waitFor({ timeout: 15000 })
@@ -938,10 +997,16 @@ const run = async () => {
     const title = () => page.locator('.cal-title').innerText()
     const t0 = await title()
     await page.getByRole('button', { name: '다음 달' }).click()
-    if ((await title()) === t0) throw new Error('다음 달 did not change the month')
+    const t1 = await title()
+    if (t1 === t0) throw new Error('first 다음 달 did not change the month')
+    await page.getByRole('button', { name: '다음 달' }).click()
+    const t2 = await title()
+    if (t2 === t1) throw new Error('second 다음 달 did not change the month')
     await page.getByRole('button', { name: '이전 달' }).click()
+    if ((await title()) !== t1) throw new Error('first 이전 달 did not return one month')
     await page.getByRole('button', { name: '이전 달' }).click()
-    if ((await title()) === t0) throw new Error('이전 달 did not change the month')
+    if ((await title()) !== t0) throw new Error('second 이전 달 did not return to start')
+    await page.getByRole('button', { name: '다음 달' }).click()
     await page.getByRole('button', { name: '오늘' }).click()
     if ((await title()) !== t0) throw new Error('[오늘] should return to the starting month')
   })
@@ -968,12 +1033,10 @@ const run = async () => {
     await page.setViewportSize({ width: 375, height: 780 })
     await boot(page)
     await newPlan(page, 'Cal Mobile')
-    const now = new Date()
-    const pastIso = ymd(new Date(now.getFullYear(), now.getMonth() - 1, 5))
+    const pastIso = accessiblePastIso(5)
     await addKeywordOnDate(page, pastIso, 'mobile kw')
 
-    await page.getByRole('tab', { name: '달력 보기' }).click()
-    await page.locator('.mobile-cal-grid').waitFor()
+    await openCalendarMonth(page, pastIso.slice(0, 7))
     if ((await page.locator('.cal-grid').count()) !== 0)
       throw new Error('narrow view must render only the compact grid')
     const dayCell = page.getByRole('button', { name: `${pastIso} · 키워드 1개`, exact: true })
