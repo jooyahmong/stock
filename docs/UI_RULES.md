@@ -88,6 +88,43 @@ on tab focus, so a plan open at midnight doesn't show a stale "today".
 - No page-level horizontal scroll on any mobile view — this is asserted by
   e2e (`docs/TESTING.md`).
 
+## Plan search (header search box)
+
+A search box sits in the app header, right of the subtitle (`PlanSearch`,
+rendered in `App.tsx`'s `<header>`). It is a **separate control** from the
+Toolbar's existing list-view search/filter (`uiStore.search`/`filter`, which
+still only filters the *currently selected month's* groups and stays
+untouched by this feature):
+
+- **Scope is the entire active plan, not the visible month.** It searches
+  every `KeywordItem.keyword` in `snapshot.keywords` for whichever plan is
+  currently active — the same data `App.tsx` already loads, no new query/DB.
+  Switching months or view mode never narrows it.
+- **Plan isolation is absolute.** Because the search source is the active
+  plan's own snapshot, another plan's items can never appear, no matter how
+  similar the query. Switching the active plan immediately clears the query
+  and closes any open result panel (the component remounts via
+  `key={activePlan.id}`) — a stale result from the previous plan must never
+  linger, even for a frame.
+- **Match rule:** case-insensitive substring, trimmed. No fuzzy matching, no
+  ranking beyond `(period, sortOrder)` — the same order `getPlanSnapshot`
+  already returns keywords in, so filtering preserves it for free.
+- Results are capped at the first 25 with a "총 N개 결과" count; there is no
+  "load more" — this is a quick jump tool, not a second list view.
+- **Clicking a result never edits or generates anything** — it's pure
+  navigation: switches to that period's month and, in Calendar view, opens
+  the day detail modal (`focusDayRequest`, reusing `DayKeywordsModal`); in
+  List view, scrolls to and briefly (~1.6s) highlights that date's
+  `PeriodGroup` (`highlightPeriod`, a `box-shadow` pulse — no animation
+  beyond that). The result panel closes either way.
+- Escape closes the result panel without clearing the query; the panel
+  reopens on refocusing the input (same query, if still non-empty) or on any
+  further typing. The query itself is never persisted (no IndexedDB/
+  localStorage row) — a reload clears it like any other transient UI state.
+- Same component for both purposes — Stock searches keyword text, Planner
+  searches task text (same underlying `KeywordItem.keyword` field), no
+  purpose-specific search logic beyond the placeholder/aria-label wording.
+
 ## Plan type surface
 
 New plans are always the date-based `'365'` type — there is no type picker

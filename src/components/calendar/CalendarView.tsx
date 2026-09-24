@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { KeywordItem, PlanPurpose, StatusColumn } from '../../repo/types'
 import { findGeneratedColumn, findCompletionColumn } from '../../domain/statusColumns'
 import { useRepository } from '../../repo/RepositoryContext'
@@ -34,6 +34,7 @@ export function CalendarView({
   onSwitchToList,
   month,
   onMonthChange,
+  focusDayRequest,
 }: {
   planId: string
   keywords: KeywordItem[]
@@ -45,6 +46,8 @@ export function CalendarView({
   onSwitchToList: () => void
   month: string
   onMonthChange: (month: string) => void
+  /** Set by Plan search's "go to result" — opens that day's detail view. */
+  focusDayRequest?: { dayIso: string; nonce: number } | null
 }) {
   if (!dateBased) {
     return (
@@ -68,6 +71,7 @@ export function CalendarView({
       onRun={onRun}
       month={month}
       onMonthChange={onMonthChange}
+      focusDayRequest={focusDayRequest}
     />
   )
 }
@@ -81,6 +85,7 @@ function CalendarBody({
   onRun,
   month,
   onMonthChange,
+  focusDayRequest,
 }: {
   planId: string
   keywords: KeywordItem[]
@@ -90,6 +95,7 @@ function CalendarBody({
   onRun: (keyword: string, keywordItemId: string) => void
   month: string
   onMonthChange: (month: string) => void
+  focusDayRequest?: { dayIso: string; nonce: number } | null
 }) {
   const repo = useRepository()
   const today = todayIso()
@@ -97,6 +103,14 @@ function CalendarBody({
   const isPlanner = purpose === 'planner'
 
   const [detailDay, setDetailDay] = useState<string | null>(null)
+
+  // Plan search "go to result": always open that day's detail, even if it's
+  // the same day already shown — the `nonce` makes each request distinct so
+  // clicking the same search result twice still re-opens it.
+  useEffect(() => {
+    if (focusDayRequest) setDetailDay(focusDayRequest.dayIso)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusDayRequest?.nonce])
 
   const genCol = useMemo(
     () => (isPlanner ? findCompletionColumn(statusColumns) : findGeneratedColumn(statusColumns)),

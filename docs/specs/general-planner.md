@@ -214,6 +214,13 @@ the same Excel Full Export backup path. See `docs/specs/sync.md` for the
 (still not built) future multi-device story, which applies identically to
 both purposes.
 
+## Plan search
+
+The header search box (`src/components/PlanSearch.tsx`) is shared, unmodified
+UI — for a Planner plan it searches task text (the same `KeywordItem.keyword`
+field) across every task in the active plan. See `docs/UI_RULES.md` → "Plan
+search" for the full behavior; nothing purpose-specific beyond wording.
+
 ## Shared infrastructure (§14 — not a separate app)
 
 Purpose changes **UI/behavior only**, never the underlying system:
@@ -226,6 +233,7 @@ Purpose changes **UI/behavior only**, never the underlying system:
 | Calendar month-grid math, day-cell layout, `+N개` overflow | `CalendarDayCell`/`MobileCalendarDayCell`/`DayKeywordsModal` (which line renderer, Quick Add, empty-cell openness) |
 | `domain/excel.ts` parser/builders | `itemLabel`/`sheetName` params (still default to Stock's exact values) |
 | Responsive breakpoint, mobile agenda/grid infrastructure | Which controls render at that breakpoint |
+| `PlanSearch` (header, full-plan search + navigate-on-click) | Placeholder/aria-label wording only |
 
 ## Stock regression guardrails
 

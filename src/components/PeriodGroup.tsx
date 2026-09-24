@@ -13,6 +13,7 @@ export function PeriodGroup({
   onRun,
   onEditPeriod,
   purpose = 'stock',
+  highlighted = false,
 }: {
   group: PeriodGroupData
   statusColumns: StatusColumn[]
@@ -20,6 +21,8 @@ export function PeriodGroup({
   onRun: (keyword: string, keywordItemId: string) => void
   onEditPeriod: (period: string) => void
   purpose?: PlanPurpose
+  /** Briefly highlighted after Plan search navigates here — see App.tsx. */
+  highlighted?: boolean
 }) {
   const repo = useRepository()
   const planIdOfGroup = group.items[0]?.planId
@@ -40,7 +43,10 @@ export function PeriodGroup({
   }
 
   return (
-    <section className="period-group">
+    <section
+      id={`pg-${group.period}`}
+      className={`period-group${highlighted ? ' is-highlighted' : ''}`}
+    >
       <header className="pg-head">
         <div className="pg-title">
           <button

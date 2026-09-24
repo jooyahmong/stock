@@ -125,6 +125,14 @@ at all. This is exactly what was observed on `stock.woojooland.com`
   identify as this app's own seed output.** If a browser has unrelated
   Plans, they are left exactly as they were, forever.
 
+## Plan search
+
+The header search box (`src/components/PlanSearch.tsx`) searches every
+keyword in the active Stock plan, regardless of the month/view on screen —
+see `docs/UI_RULES.md` → "Plan search" for the full behavior (scope, plan
+isolation, navigation-on-click, lifecycle). It is unrelated to the Toolbar's
+existing month-scoped list search/filter, which is unchanged.
+
 ## Explicitly out of scope for this spec
 
 - Generation (linking out / Direct Generate) — `docs/specs/generation.md`.

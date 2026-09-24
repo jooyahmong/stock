@@ -1366,6 +1366,123 @@ const run = async () => {
       throw new Error('planner export row: ' + JSON.stringify(taskRow))
   })
 
+  // ---- Plan search (header search box, current-plan-only scope) ----
+
+  await test('Plan 검색: 현재 Plan만 검색 (Plan isolation) + Plan 전환 시 query/결과 초기화 + 결과 0개 안내', async (page) => {
+    await boot(page)
+    await newPlan(page, 'Search Plan A')
+    const dateA = ymd(new Date())
+    await addKeywordOnDate(page, dateA, 'UniqueAlphaSearchTarget')
+
+    await newPlan(page, 'Search Plan B')
+    const dateB = ymd(new Date())
+    await addKeywordOnDate(page, dateB, 'UniqueBetaSearchTarget')
+
+    const select = page.locator('.plan-select')
+    await select.selectOption({ label: 'Search Plan A' })
+    await page.locator('.period-group .kw-text').first().waitFor()
+
+    await page.locator('.plan-search-input').fill('alpha')
+    await page.locator('.plan-search-result', { hasText: 'UniqueAlphaSearchTarget' }).waitFor()
+    if (await page.locator('.plan-search-result', { hasText: 'UniqueBetaSearchTarget' }).count())
+      throw new Error('Plan A search must never show Plan B items')
+
+    // Plan B's item is not searchable from Plan A -> "no results" panel,
+    // scoped wording (not "전체 계획에서 없음").
+    await page.locator('.plan-search-clear').click()
+    await page.locator('.plan-search-input').fill('beta')
+    const emptyMsg = page.locator('.plan-search-empty')
+    await emptyMsg.waitFor()
+    const emptyText = (await emptyMsg.innerText()).trim()
+    if (emptyText !== '현재 계획에서 검색 결과가 없습니다.')
+      throw new Error('empty search message: ' + emptyText)
+
+    // switching plans clears the previous query/results immediately
+    await select.selectOption({ label: 'Search Plan B' })
+    await page.locator('.period-group .kw-text').first().waitFor()
+    if ((await page.locator('.plan-search-input').inputValue()) !== '')
+      throw new Error('switching plans must clear the previous search query')
+    if (await page.locator('.plan-search-results').count())
+      throw new Error('switching plans must close any leftover result panel')
+
+    // Plan B can find its own item
+    await page.locator('.plan-search-input').fill('BETA')
+    await page.locator('.plan-search-result', { hasText: 'UniqueBetaSearchTarget' }).waitFor()
+  })
+
+  await test('Plan 검색: 대소문자 무관 부분 검색 + 현재 화면 월 밖의 item도 전체 Plan에서 검색됨', async (page) => {
+    await boot(page)
+    await newPlan(page, 'Search Scope Test')
+    const now = new Date()
+    const farIso = ymd(new Date(now.getFullYear(), now.getMonth() + 3, 15))
+    await addKeywordOnDate(page, farIso, 'Christmas Background Scene')
+
+    // navigate back to a different month so the far item is off-screen
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    await goToMonth(page, ymd(now).slice(0, 7))
+
+    await page.locator('.plan-search-input').fill('CHRIST')
+    const result = page.locator('.plan-search-result', { hasText: 'Christmas Background Scene' })
+    await result.waitFor()
+    const periodText = await result.locator('.plan-search-result-period').innerText()
+    if (periodText !== farIso) throw new Error('search result period mismatch: ' + periodText)
+  })
+
+  await test('Plan 검색: 결과 클릭 → Calendar는 해당 날짜 detail로, List는 해당 PeriodGroup으로 이동', async (page) => {
+    await boot(page)
+    await newPlan(page, 'Search Nav Test')
+    const now = new Date()
+    const targetIso = ymd(new Date(now.getFullYear(), now.getMonth() + 2, 10))
+    await addKeywordOnDate(page, targetIso, 'Valentine Background Nav')
+
+    // --- Calendar navigation ---
+    await page.getByRole('tab', { name: '달력 보기', exact: true }).click()
+    await goToMonth(page, ymd(now).slice(0, 7))
+    await page.locator('.plan-search-input').fill('valentine')
+    await page.locator('.plan-search-result', { hasText: 'Valentine Background Nav' }).click()
+    await page.locator('.cal-day-list .cal-kw', { hasText: 'Valentine Background Nav' }).waitFor()
+    const titleAfter = (await page.locator('.cal-title').innerText()).trim()
+    if (monthFromTitle(titleAfter) !== targetIso.slice(0, 7))
+      throw new Error('calendar did not navigate to the target month: ' + titleAfter)
+    if (await page.locator('.plan-search-results').count())
+      throw new Error('search result panel should close after navigating')
+    await page.keyboard.press('Escape') // close day modal
+
+    // --- List navigation ---
+    await page.getByRole('tab', { name: '목록 보기', exact: true }).click()
+    await goToMonth(page, ymd(now).slice(0, 7))
+    await page.locator('.plan-search-input').fill('valentine')
+    await page.locator('.plan-search-result', { hasText: 'Valentine Background Nav' }).click()
+    const group = page.locator(`#pg-${targetIso}`)
+    await group.waitFor()
+    await group.locator('.kw-text', { hasText: 'Valentine Background Nav' }).waitFor()
+    if (!(await group.evaluate((el) => el.classList.contains('is-highlighted'))))
+      throw new Error('target PeriodGroup should be briefly highlighted after search navigation')
+  })
+
+  await test('Plan 검색: Planner task text 검색', async (page) => {
+    await boot(page)
+    await newPlannerPlan(page, 'Search Planner Test')
+    const dateIso = ymd(new Date())
+    await addTaskOnDate(page, dateIso, '치과 예약하기')
+
+    await page.locator('.plan-search-input').fill('치과')
+    await page.locator('.plan-search-result', { hasText: '치과 예약하기' }).waitFor()
+  })
+
+  await test('Plan 검색 mobile: 검색창 정상 표시, 가로 스크롤 없음', async (page) => {
+    await page.setViewportSize({ width: 375, height: 780 })
+    await boot(page)
+    const input = page.locator('.plan-search-input')
+    await input.waitFor()
+    await input.fill('test')
+    await page.waitForTimeout(100)
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
+    if (overflow > 2) throw new Error('horizontal overflow of ' + overflow + 'px')
+  })
+
   await browser.close()
 
   // report

@@ -10,6 +10,30 @@ _Nothing in progress right now._
 
 ## Recently completed
 
+### Plan search (header search box)
+
+- **Status:** `IMPLEMENTED`. Not yet committed as of this entry — see git
+  status. Full behavior in `docs/UI_RULES.md` → "Plan search".
+- **What shipped:** `src/components/PlanSearch.tsx`, rendered in `App.tsx`'s
+  header next to the subtitle. Searches every item (keyword or task text) in
+  the currently active plan only — full-plan scope, not month-scoped, and
+  never leaks another plan's data (plan switch clears query/results via a
+  `key={activePlan.id}` remount). Case-insensitive substring match over
+  `PlanSnapshot.keywords` (already sorted by `(period, sortOrder)` — no new
+  index/DB). Clicking a result navigates: Calendar view opens that day's
+  detail modal (`CalendarView`'s new `focusDayRequest` prop); List view
+  scrolls to and briefly highlights that date's `PeriodGroup` (new `id`/
+  `highlighted` prop). Shared between Stock and Planner, no purpose-specific
+  logic beyond wording. Unrelated to and doesn't touch the Toolbar's existing
+  month-scoped list search/filter.
+- **Verification:** `tsc -p . --noEmit` clean; unit 131/131 (unchanged — no
+  new unit-testable pure logic, the substring filter is trivial and covered
+  by E2E); production build clean; 5 new Plan-search E2E scenarios (isolation
+  + query-clear-on-plan-switch + empty-result wording, case-insensitive +
+  off-screen-month scope, click-to-navigate for both views + highlight,
+  Planner task-text search, mobile no-overflow) all pass; full E2E 48/48
+  (7 Direct Generation skips), 0 Stock/Planner regressions.
+
 ### Production default-pack audit + additive migration
 
 - **Status:** `RESOLVED`. `stock.woojooland.com` showed pre-existing Plans

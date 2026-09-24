@@ -130,6 +130,112 @@ input[type='radio'] {
     display: none;
   }
 }
+.plan-search {
+  position: relative;
+  margin-left: auto;
+  width: 280px;
+  max-width: 100%;
+}
+@media (max-width: 640px) {
+  .plan-search {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+.plan-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 5px 8px;
+}
+.plan-search-icon {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.plan-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+.plan-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.plan-search-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-mute);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.plan-search-clear:hover {
+  color: var(--text);
+}
+.plan-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+  max-height: 360px;
+  overflow-y: auto;
+}
+.plan-search-empty {
+  padding: 12px;
+  font-size: 12.5px;
+  color: var(--text-mute);
+  margin: 0;
+}
+.plan-search-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+.plan-search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font: inherit;
+  color: var(--text);
+}
+.plan-search-result:hover {
+  background: var(--bg-soft);
+}
+.plan-search-result-period {
+  font-size: 11px;
+  color: var(--text-mute);
+}
+.plan-search-result-text {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-search-count {
+  padding: 6px 8px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-mute);
+  border-top: 1px solid var(--border);
+}
 
 /* ---------- plan bar ---------- */
 .plan-bar {
@@ -439,6 +545,10 @@ input[type='radio'] {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+.period-group.is-highlighted {
+  box-shadow: 0 0 0 2px var(--coral-soft), 0 0 0 3px var(--coral);
 }
 .pg-head {
   display: flex;

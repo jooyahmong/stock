@@ -20,6 +20,7 @@ import { readViewMode, writeViewMode, type ViewMode } from './lib/viewModePref'
 
 import { Toast } from './components/Toast'
 import { PlanBar } from './components/PlanBar'
+import { PlanSearch } from './components/PlanSearch'
 import { ViewToggle } from './components/ViewToggle'
 import { Toolbar, PlanActions } from './components/Toolbar'
 import { SelectionBar } from './components/SelectionBar'
@@ -153,6 +154,31 @@ export default function App() {
   }, [])
   const [listWindow, setListWindow] = useState<ListWindowState>(DEFAULT_LIST_WINDOW)
   useEffect(() => setListWindow(DEFAULT_LIST_WINDOW), [activePlanId])
+  // Plan search "go to result" — Calendar opens that day's detail; List
+  // scrolls to and briefly highlights that date's PeriodGroup. Both are
+  // nonce-tagged so re-clicking the same result still re-triggers.
+  const [focusDayRequest, setFocusDayRequest] = useState<{ dayIso: string; nonce: number } | null>(null)
+  const [highlightPeriod, setHighlightPeriod] = useState<{ period: string; nonce: number } | null>(null)
+  useEffect(() => {
+    if (!highlightPeriod) return
+    document.getElementById(`pg-${highlightPeriod.period}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+    const timer = window.setTimeout(() => setHighlightPeriod(null), 1600)
+    return () => window.clearTimeout(timer)
+  }, [highlightPeriod])
+  const navigateToPeriod = useCallback(
+    (period: string) => {
+      setSelectedMonth(period.slice(0, 7))
+      if (viewMode === 'calendar') {
+        setFocusDayRequest({ dayIso: period, nonce: Date.now() })
+      } else {
+        setHighlightPeriod({ period, nonce: Date.now() })
+      }
+    },
+    [viewMode],
+  )
   const [today, setToday] = useState(() => currentPeriod('date'))
   useEffect(() => {
     const refresh = () => setToday(currentPeriod('date'))
@@ -292,6 +318,14 @@ export default function App() {
         <span className="app-sub">
           오늘도 생각만 하고 실천하지 못한 나를 위한 365일 스톡 진행 플래너
         </span>
+        {activePlan && snapshot && (
+          <PlanSearch
+            key={activePlan.id}
+            items={snapshot.keywords}
+            purpose={purpose}
+            onNavigate={navigateToPeriod}
+          />
+        )}
       </header>
 
       <PlanBar plans={plans ?? []} activePlan={activePlan} />
@@ -339,6 +373,7 @@ export default function App() {
               onSwitchToList={() => setViewMode('list')}
               month={selectedMonth}
               onMonthChange={setSelectedMonth}
+              focusDayRequest={focusDayRequest}
             />
           ) : (
             <>
@@ -377,6 +412,7 @@ export default function App() {
                     onRun={onRun}
                     onEditPeriod={setEditingPeriod}
                     purpose={purpose}
+                    highlighted={highlightPeriod?.period === g.period}
                   />
                 ))}
                 {!calendarAvailable && listView.visible.length === 0 && listView.hasPast && (
@@ -437,6 +473,7 @@ export default function App() {
                           onRun={onRun}
                           onEditPeriod={setEditingPeriod}
                           purpose={purpose}
+                          highlighted={highlightPeriod?.period === g.period}
                         />
                       ))}
                     </div>
